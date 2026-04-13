@@ -41,10 +41,10 @@ html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:va
 /* ── DETECTIVE ICON (SVG) ────────────────────── */
 .detective-icon{
   width:80px;height:80px;
-  filter:drop-shadow(0 0 18px rgba(201,168,76,.55));
+  filter:drop-shadow(0 0 18px rgba(255,255,255,.35));
   animation:breathe 3s ease-in-out infinite;
 }
-@keyframes breathe{0%,100%{transform:scale(1);filter:drop-shadow(0 0 18px rgba(201,168,76,.55))}50%{transform:scale(1.07);filter:drop-shadow(0 0 30px rgba(201,168,76,.85))}}
+@keyframes breathe{0%,100%{transform:scale(1);filter:drop-shadow(0 0 18px rgba(255,255,255,.35))}50%{transform:scale(1.07);filter:drop-shadow(0 0 30px rgba(255,255,255,.65))}}
 
 .logo-title{font-family:var(--serif);font-size:clamp(52px,14vw,84px);font-weight:700;letter-spacing:.06em;line-height:.9;background:linear-gradient(170deg,var(--snow) 0%,var(--gold2) 45%,var(--rose) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .logo-sub{font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--fog)}
@@ -261,7 +261,7 @@ var G={
   isHost:false,role:null,myWord:null,
   players:{},gameData:null,
   votedAlready:false,dbOff:null,qrScanner:null,
-  joinUrl:''
+  joinUrl:'',lastVoteRound:null
 };
 
 /* ═══════════════ UTILS ════════════════════ */
@@ -306,25 +306,25 @@ function pips(round,failed){
 /* ═══════════════ DETECTIVE SVG ICON ═══════════ */
 var DETECTIVE_SVG =
   '<svg class="detective-icon" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">'+
-  /* Hat brim */ '<ellipse cx="40" cy="28" rx="24" ry="5" fill="#c9a84c" opacity=".9"/>'+
-  /* Hat top  */ '<rect x="22" y="8" width="36" height="22" rx="6" fill="#b8922a"/>'+
-  /* Hat band */ '<rect x="22" y="24" width="36" height="5" fill="#8a6a18"/>'+
-  /* Face     */ '<ellipse cx="40" cy="44" rx="16" ry="15" fill="#e8c99a"/>'+
+  /* Hat brim */ '<ellipse cx="40" cy="28" rx="24" ry="5" fill="#fff" opacity=".9"/>'+
+  /* Hat top  */ '<rect x="22" y="8" width="36" height="22" rx="6" fill="#1a1a1a"/>'+
+  /* Hat band */ '<rect x="22" y="24" width="36" height="5" fill="#444"/>'+
+  /* Face     */ '<ellipse cx="40" cy="44" rx="16" ry="15" fill="#f0f0f0"/>'+
   /* Left eye */ '<circle cx="34" cy="40" r="4.5" fill="#fff"/>'+
-  '<circle cx="34" cy="40" r="2.5" fill="#2a1a0a"/>'+
+  '<circle cx="34" cy="40" r="2.5" fill="#111"/>'+
   '<circle cx="35" cy="39" r=".8" fill="#fff"/>'+
   /* Right eye*/ '<circle cx="46" cy="40" r="4.5" fill="#fff"/>'+
-  '<circle cx="46" cy="40" r="2.5" fill="#2a1a0a"/>'+
+  '<circle cx="46" cy="40" r="2.5" fill="#111"/>'+
   '<circle cx="47" cy="39" r=".8" fill="#fff"/>'+
-  /* Eyebrows */ '<path d="M30 35.5 Q34 33.5 38 35.5" stroke="#6b4a1a" stroke-width="1.6" fill="none" stroke-linecap="round"/>'+
-  '<path d="M42 35.5 Q46 33.5 50 35.5" stroke="#6b4a1a" stroke-width="1.6" fill="none" stroke-linecap="round"/>'+
-  /* Nose     */ '<ellipse cx="40" cy="45" rx="2.5" ry="2" fill="#c9a070"/>'+
-  /* Mouth    */ '<path d="M35 51 Q40 54.5 45 51" stroke="#8a5a2a" stroke-width="1.8" fill="none" stroke-linecap="round"/>'+
-  /* Coat collar */ '<path d="M24 58 Q30 54 40 56 Q50 54 56 58 Q52 72 40 74 Q28 72 24 58Z" fill="#2a2a50"/>'+
-  /* Tie      */ '<polygon points="40,56 37,62 40,70 43,62" fill="#c9a84c"/>'+
-  /* Magnifier circle */ '<circle cx="62" cy="62" r="11" stroke="#e8c96d" stroke-width="3.2" fill="rgba(232,201,109,.08)"/>'+
-  /* Magnifier lens glint */ '<path d="M57 57 Q59 55 62 56" stroke="rgba(255,255,255,.6)" stroke-width="1.5" fill="none" stroke-linecap="round"/>'+
-  /* Magnifier handle */ '<line x1="70" y1="70" x2="77" y2="77" stroke="#c9a84c" stroke-width="4" stroke-linecap="round"/>'+
+  /* Eyebrows */ '<path d="M30 35.5 Q34 33.5 38 35.5" stroke="#222" stroke-width="1.6" fill="none" stroke-linecap="round"/>'+
+  '<path d="M42 35.5 Q46 33.5 50 35.5" stroke="#222" stroke-width="1.6" fill="none" stroke-linecap="round"/>'+
+  /* Nose     */ '<ellipse cx="40" cy="45" rx="2.5" ry="2" fill="#ccc"/>'+
+  /* Mouth    */ '<path d="M35 51 Q40 54.5 45 51" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>'+
+  /* Coat collar */ '<path d="M24 58 Q30 54 40 56 Q50 54 56 58 Q52 72 40 74 Q28 72 24 58Z" fill="#111"/>'+
+  /* Tie      */ '<polygon points="40,56 37,62 40,70 43,62" fill="#fff"/>'+
+  /* Magnifier circle */ '<circle cx="62" cy="62" r="11" stroke="#fff" stroke-width="3.2" fill="rgba(255,255,255,.08)"/>'+
+  /* Magnifier lens glint */ '<path d="M57 57 Q59 55 62 56" stroke="rgba(255,255,255,.7)" stroke-width="1.5" fill="none" stroke-linecap="round"/>'+
+  /* Magnifier handle */ '<line x1="70" y1="70" x2="77" y2="77" stroke="#ccc" stroke-width="4" stroke-linecap="round"/>'+
   '</svg>';
 
 /* ═══════════════ QR MODAL ════════════════════ */
@@ -520,7 +520,7 @@ function showLobby(){
     return (players[a].joinedAt||0)-(players[b].joinedAt||0);
   });
   var count=pIds.length;
-  var canStart=G.isHost&&count>=2;
+  var canStart=G.isHost&&count>=3;
   G.joinUrl=location.origin+location.pathname+'?join='+G.gameCode;
 
   // Vertical player list
@@ -538,7 +538,7 @@ function showLobby(){
 
   var footer=G.isHost
     ?'<button class="btn btn-gold"'+(canStart?'':' disabled')+' onclick="startGame()">⚡&nbsp; Start Game</button>'+
-      '<p class="lobby-hint">No player limit · Min. 2 to start</p>'
+      '<p class="lobby-hint">No player limit · Min. 3 to start</p>'
     :'<p class="lobby-hint">Waiting for host to start the game…</p>';
 
   R(
@@ -570,7 +570,7 @@ function showLobby(){
     '</div>'+
 
     '<div class="lobby-footer">'+
-      '<p class="lobby-status">'+(count<2?'Need at least 2 players ('+count+' / 2)':count+' players ready')+'</p>'+
+      '<p class="lobby-status">'+(count<3?'Need at least 3 players ('+count+' / 3)':count+' players ready')+'</p>'+
       footer+
     '</div>'+
     '</div>'
@@ -590,7 +590,7 @@ function showLobby(){
 function startGame(){
   if(!G.isHost) return;
   var ids=Object.keys(G.players);
-  if(ids.length<2) return;
+  if(ids.length<3) return;
   var pair=rnd(WORDS);
   var imp=shuffle(ids)[0];
   var roles={};
@@ -681,17 +681,25 @@ function showVote(){
   G.view='vote';
   var players=G.players;
   var votes=(G.gameData&&G.gameData.votes)||{};
+  var round=G.gameData&&G.gameData.round||1;
+  // Reset votedAlready if this is a fresh vote for the current round
+  // (handles the case where status transitions to 'vote' on a new round)
+  var voteRoundKey='voteRound_'+round;
+  if(G.lastVoteRound!==voteRoundKey){
+    G.lastVoteRound=voteRoundKey;
+    G.votedAlready=!!votes[G.playerId]; // restore from DB in case of reconnect
+  }
   var myVote=votes[G.playerId];
   var vc=Object.keys(votes).length,tot=Object.keys(players).length;
-  var round=G.gameData&&G.gameData.round||1;
   var failed=G.gameData&&G.gameData.failedRounds||[];
-  var cards=Object.keys(players).map(function(id){
-    var p=players[id],isMe=id===G.playerId,voted=myVote===id;
+  // Exclude self from voting cards
+  var cards=Object.keys(players).filter(function(id){return id!==G.playerId;}).map(function(id){
+    var p=players[id],voted=myVote===id;
     var cnt=Object.values(votes).filter(function(v){return v===id;}).length;
-    return '<div class="vc'+(voted?' vc-voted':'')+(isMe?' vc-self':'')+'"'+
-      (!myVote&&!isMe?' onclick="castVote(\''+id+'\')"':'')+'>'+
+    return '<div class="vc'+(voted?' vc-voted':'')+'"'+
+      (!myVote?' onclick="castVote(\''+id+'\')"':'')+'>'+
       '<div class="vc-av">'+p.name[0].toUpperCase()+'</div>'+
-      '<div class="vc-name">'+p.name+(isMe?'<br><span style="font-size:10px;color:var(--fog);font-family:var(--mono)">(you)</span>':'')+'</div>'+
+      '<div class="vc-name">'+p.name+'</div>'+
       '<div class="vc-cnt">'+(cnt>0?cnt+' vote'+(cnt>1?'s':''):'')+'</div>'+
       (voted?'<div class="vc-check">✓</div>':'')+
     '</div>';
@@ -769,6 +777,7 @@ function showRoundFailed(){
 function nextRound(){
   if(!G.isHost) return;
   G.votedAlready=false;
+  G.lastVoteRound=null;
   db.ref('games/'+G.gameCode+'/votedAlready').remove();
   db.ref('games/'+G.gameCode).update({status:'discuss'});
 }
@@ -815,6 +824,7 @@ function showResult(){
 function playAgain(){
   if(!G.isHost) return;
   G.votedAlready=false;
+  G.lastVoteRound=null;
   var rp={};
   Object.keys(G.players).forEach(function(id){
     var p=G.players[id];rp[id]={name:p.name,isHost:!!p.isHost,joinedAt:p.joinedAt||0};
@@ -834,7 +844,7 @@ function listenGame(code){
     var gd=snap.val();
     G.gameData=gd;G.players=gd.players||{};
     switch(gd.status){
-      case 'lobby':          G.votedAlready=false; showLobby();        break;
+      case 'lobby':          G.votedAlready=false; G.lastVoteRound=null; showLobby();        break;
       case 'role':           if(G.view!=='role')         showRole();         break;
       case 'discuss':        if(G.view!=='discuss')      showDiscuss();      break;
       case 'vote':           showVote(); checkVoteResult();              break;
