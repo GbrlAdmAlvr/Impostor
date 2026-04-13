@@ -8,7 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -77,17 +77,23 @@ html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:va
 .code-chip{display:inline-flex;align-items:center;font-family:var(--mono);letter-spacing:.22em;font-size:15px;background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);color:var(--gold2);padding:4px 14px;border-radius:8px}
 
 /* ── QR SCANNER (join screen) ───────────────── */
-.scanner-shell{width:100%;border-radius:16px;overflow:hidden;border:1px solid var(--line2);background:#000;min-height:60px}
-#qr-reader{width:100%!important}
-#qr-reader video{border-radius:0!important;width:100%!important;display:block}
-#qr-reader img{display:none!important}
-#qr-reader__header_message{display:none!important}
-#qr-reader__dashboard_section_csr button{background:var(--iris)!important;color:#fff!important;border:none!important;padding:10px 20px!important;border-radius:8px!important;font-family:var(--sans)!important;font-size:14px!important;cursor:pointer!important;margin:8px 0!important}
-#qr-reader__status_span{color:var(--fog)!important;font-size:11px!important;font-family:var(--mono)!important}
-#qr-reader__dashboard_section_swaplink{color:var(--iris)!important;font-size:12px!important}
-#qr-reader__filescan_input{color:var(--snow)!important}
+.scanner-wrap{width:100%;position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:1/1;max-height:280px}
+.scanner-wrap video{width:100%;height:100%;object-fit:cover;display:block}
+.scanner-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.scanner-box{width:62%;aspect-ratio:1/1;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.55);position:relative}
+.scanner-box::before,.scanner-box::after{content:'';position:absolute;width:22px;height:22px;border-color:var(--gold2);border-style:solid}
+.scanner-box::before{top:0;left:0;border-width:3px 0 0 3px;border-radius:6px 0 0 0}
+.scanner-box::after{bottom:0;right:0;border-width:0 3px 3px 0;border-radius:0 0 6px 0}
+.scanner-corner{position:absolute;width:22px;height:22px;border-color:var(--gold2);border-style:solid}
+.scanner-corner.tr{top:0;right:0;border-width:3px 3px 0 0;border-radius:0 6px 0 0}
+.scanner-corner.bl{bottom:0;left:0;border-width:0 0 3px 3px;border-radius:0 0 0 6px}
+.scanner-line{position:absolute;left:8%;right:8%;height:2px;background:linear-gradient(90deg,transparent,var(--gold2),transparent);animation:scanLine 2s ease-in-out infinite;border-radius:2px}
+@keyframes scanLine{0%,100%{top:12%;opacity:.7}50%{top:82%;opacity:1}}
+.scanner-start-btn{width:100%;padding:14px;background:rgba(123,97,255,.12);border:1.5px solid rgba(123,97,255,.4);border-radius:14px;color:var(--snow);font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .18s}
+.scanner-start-btn:hover{background:rgba(123,97,255,.2);border-color:var(--iris)}
 .scan-note{font-size:12px;color:var(--fog);font-family:var(--mono);text-align:center;letter-spacing:.05em;padding:4px 0}
 .scan-ok{color:var(--jade)!important}
+.scan-err{color:var(--rose2)!important}
 
 /* ── LOBBY ──────────────────────────────────── */
 .lobby-top{width:100%;background:var(--ink2);border:1px solid var(--line);border-radius:20px;padding:22px 24px;display:flex;flex-direction:column;gap:16px}
@@ -283,8 +289,18 @@ function R(html){root.innerHTML=html}
 
 function stopScanner(){
   if(G.qrScanner){
-    try{G.qrScanner.stop().catch(function(){});}catch(e){}
+    G.qrScanner.active=false;
+    if(G.qrScanner.rafId) cancelAnimationFrame(G.qrScanner.rafId);
+    if(G.qrScanner.stream){
+      G.qrScanner.stream.getTracks().forEach(function(t){t.stop();});
+    }
     G.qrScanner=null;
+  }
+  // Clean up video element if present
+  var v=document.getElementById('scanVideo');
+  if(v&&v.srcObject){
+    try{v.srcObject.getTracks().forEach(function(t){t.stop()});}catch(e){}
+    v.srcObject=null;
   }
 }
 
@@ -396,16 +412,17 @@ function showJoin(){
       '<div><p class="card-title">Join a Game</p>'+
         '<p class="card-sub">Scan the host\'s QR code, or type the game code below</p>'+
       '</div>'+
-
-      '<!-- Camera scanner -->'+
       '<div>'+
         '<p class="sec-label" style="margin-bottom:8px">📷 Camera Scanner</p>'+
-        '<div class="scanner-shell"><div id="qr-reader"></div></div>'+
-        '<p class="scan-note" id="scanStatus" style="margin-top:8px">Tap "Start Camera" above to scan</p>'+
+        '<div id="scannerArea">'+
+          '<button class="scanner-start-btn" onclick="startQrScanner()">'+
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'+
+            'Tap to Start Camera'+
+          '</button>'+
+        '</div>'+
+        '<p class="scan-note" id="scanStatus" style="margin-top:10px">Tap button above to open camera</p>'+
       '</div>'+
-
       '<div class="divider">or enter game code</div>'+
-
       '<input id="codeInput" class="input-field" type="text" placeholder="e.g. AB3XY" maxlength="5"'+
         ' autocomplete="off" style="text-transform:uppercase;letter-spacing:.28em;font-size:22px;text-align:center"/>'+
       '<button class="btn btn-gold" onclick="joinByCode()">Join &rarr;</button>'+
@@ -413,53 +430,112 @@ function showJoin(){
     '</div>'
   );
   document.getElementById('codeInput').addEventListener('keydown',function(e){if(e.key==='Enter')joinByCode();});
-  startQrScanner();
 }
 
 function startQrScanner(){
-  if(typeof Html5Qrcode==='undefined') return;
-  // Small delay so DOM is fully painted
-  setTimeout(function(){
-    var readerEl=document.getElementById('qr-reader');
-    if(!readerEl) return;
-    try{
-      var scanner=new Html5Qrcode('qr-reader',{verbose:false});
-      G.qrScanner=scanner;
-      var config={fps:12,qrbox:function(w,h){var s=Math.min(w,h)*0.7;return{width:s,height:s}},aspectRatio:1.0};
-      scanner.start(
-        {facingMode:'environment'},
-        config,
-        function(decoded){
-          if(!decoded) return;
-          var code=null;
-          // Try to parse as URL first
-          try{
-            var u=new URL(decoded.trim());
-            code=u.searchParams.get('join');
-          }catch(e){}
-          // If not a URL, treat raw string as code
-          if(!code){
-            var raw=decoded.trim().replace(/\s/g,'').toUpperCase();
-            if(raw.length>=4&&raw.length<=8) code=raw;
-          }
-          if(code){
-            code=code.toUpperCase();
-            var s=document.getElementById('scanStatus');
-            if(s){s.textContent='✓ Code found: '+code;s.className='scan-note scan-ok';}
-            stopScanner();
-            setTimeout(function(){joinByCode(code);},400);
-          }
-        },
-        function(){/* scan miss - ignore */}
-      ).catch(function(err){
-        var s=document.getElementById('scanStatus');
-        if(s) s.textContent='Camera unavailable — type the code below';
-      });
-    }catch(e){
-      var s=document.getElementById('scanStatus');
-      if(s) s.textContent='Camera unavailable — type the code below';
+  var area=document.getElementById('scannerArea');
+  var status=document.getElementById('scanStatus');
+  if(!area) return;
+
+  area.innerHTML=
+    '<div class="scanner-wrap" id="scannerWrap">'+
+      '<video id="scanVideo" autoplay playsinline muted></video>'+
+      '<canvas id="scanCanvas" style="display:none"></canvas>'+
+      '<div class="scanner-overlay">'+
+        '<div class="scanner-box">'+
+          '<div class="scanner-corner tr"></div>'+
+          '<div class="scanner-corner bl"></div>'+
+          '<div class="scanner-line"></div>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<button onclick="stopScanner()" style="margin-top:10px;width:100%;padding:10px;background:rgba(232,69,90,.08);border:1px solid rgba(232,69,90,.28);border-radius:10px;color:var(--rose2);font-family:var(--sans);font-size:13px;cursor:pointer;font-weight:600">✕ Cancel</button>';
+
+  if(status) status.textContent='Requesting camera…';
+
+  navigator.mediaDevices.getUserMedia({
+    video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
+  }).then(function(stream){
+    var video=document.getElementById('scanVideo');
+    if(!video){stream.getTracks().forEach(function(t){t.stop();});return;}
+    video.srcObject=stream;
+    G.qrScanner={stream:stream,rafId:null,active:true};
+    if(status) status.textContent='Scanning — hold QR code steady…';
+
+    function runJsQR(){
+      if(!G.qrScanner||!G.qrScanner.active) return;
+      var v=document.getElementById('scanVideo');
+      var c=document.getElementById('scanCanvas');
+      if(!v||!c||v.readyState<2){G.qrScanner.rafId=requestAnimationFrame(runJsQR);return;}
+      c.width=v.videoWidth; c.height=v.videoHeight;
+      c.getContext('2d').drawImage(v,0,0);
+      var img=c.getContext('2d').getImageData(0,0,c.width,c.height);
+      if(typeof jsQR!=='undefined'){
+        var result=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
+        if(result&&result.data){onScanSuccess(result.data);return;}
+      }
+      G.qrScanner.rafId=requestAnimationFrame(runJsQR);
     }
-  },350);
+
+    function runBD(){
+      if(!G.qrScanner||!G.qrScanner.active) return;
+      var v=document.getElementById('scanVideo');
+      if(!v){return;}
+      window._bd.detect(v).then(function(codes){
+        if(!G.qrScanner||!G.qrScanner.active) return;
+        if(codes&&codes.length){onScanSuccess(codes[0].rawValue);return;}
+        G.qrScanner.rafId=requestAnimationFrame(runBD);
+      }).catch(function(){
+        if(G.qrScanner&&G.qrScanner.active)
+          G.qrScanner.rafId=requestAnimationFrame(runBD);
+      });
+    }
+
+    video.addEventListener('loadedmetadata',function(){
+      video.play().then(function(){
+        // Prefer native BarcodeDetector, fall back to jsQR
+        if('BarcodeDetector' in window){
+          BarcodeDetector.getSupportedFormats().then(function(fmts){
+            if(fmts.indexOf('qr_code')>=0){
+              window._bd=new BarcodeDetector({formats:['qr_code']});
+              G.qrScanner.rafId=requestAnimationFrame(runBD);
+            } else {
+              G.qrScanner.rafId=requestAnimationFrame(runJsQR);
+            }
+          }).catch(function(){G.qrScanner.rafId=requestAnimationFrame(runJsQR);});
+        } else {
+          G.qrScanner.rafId=requestAnimationFrame(runJsQR);
+        }
+      }).catch(function(){
+        if(status) status.textContent='Could not start camera — type the code below';
+      });
+    });
+
+  }).catch(function(err){
+    var msg=err.name==='NotAllowedError'?'Camera permission denied — type the code below':
+            err.name==='NotFoundError'?'No camera found — type the code below':
+            'Camera unavailable — type the code below';
+    if(area) area.innerHTML='<p class="scan-note scan-err" style="padding:16px 0">⚠ '+msg+'</p>';
+    if(status) status.textContent='';
+  });
+}
+
+function onScanSuccess(decoded){
+  if(!decoded) return;
+  var code=null;
+  try{var u=new URL(decoded.trim());code=u.searchParams.get('join');}catch(e){}
+  if(!code){
+    var raw=decoded.trim().replace(/\s/g,'').toUpperCase();
+    if(raw.length>=4&&raw.length<=8) code=raw;
+  }
+  if(!code) return;
+  code=code.toUpperCase();
+  stopScanner();
+  var status=document.getElementById('scanStatus');
+  if(status){status.textContent='✓ Code: '+code+' — joining…';status.className='scan-note scan-ok';}
+  var area=document.getElementById('scannerArea');
+  if(area) area.innerHTML='<div style="padding:14px;text-align:center;font-family:var(--mono);font-size:13px;color:var(--jade)">✓ QR scanned successfully</div>';
+  setTimeout(function(){joinByCode(code);},300);
 }
 
 /* ═══════════════ HOST ═══════════════════════ */
