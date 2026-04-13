@@ -40,11 +40,11 @@ html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:va
 
 /* ── DETECTIVE ICON (SVG) ────────────────────── */
 .detective-icon{
-  width:80px;height:80px;
-  filter:drop-shadow(0 0 18px rgba(255,255,255,.35));
+  width:96px;height:96px;
+  filter:drop-shadow(0 0 18px rgba(201,168,76,.5));
   animation:breathe 3s ease-in-out infinite;
 }
-@keyframes breathe{0%,100%{transform:scale(1);filter:drop-shadow(0 0 18px rgba(255,255,255,.35))}50%{transform:scale(1.07);filter:drop-shadow(0 0 30px rgba(255,255,255,.65))}}
+@keyframes breathe{0%,100%{transform:scale(1);filter:drop-shadow(0 0 18px rgba(201,168,76,.5))}50%{transform:scale(1.07);filter:drop-shadow(0 0 30px rgba(201,168,76,.85))}}
 
 .logo-title{font-family:var(--serif);font-size:clamp(52px,14vw,84px);font-weight:700;letter-spacing:.06em;line-height:.9;background:linear-gradient(170deg,var(--snow) 0%,var(--gold2) 45%,var(--rose) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .logo-sub{font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--fog)}
@@ -95,8 +95,6 @@ html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:va
 .lobby-code-label{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--fog);margin-bottom:6px}
 .lobby-code{font-family:var(--mono);font-size:clamp(32px,10vw,50px);font-weight:500;letter-spacing:.3em;color:var(--gold2);line-height:1}
 .lobby-count{font-family:var(--mono);font-size:11px;color:var(--fog);margin-top:8px;letter-spacing:.1em}
-.qr-preview{background:#fff;border-radius:10px;padding:6px;flex-shrink:0;cursor:pointer;transition:transform .15s;border:2px solid transparent}
-.qr-preview:hover{transform:scale(1.04);border-color:rgba(201,168,76,.4)}
 
 /* Show QR button */
 .show-qr-btn{width:100%;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:12px;padding:11px 16px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--gold2);transition:all .18s}
@@ -173,7 +171,6 @@ html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:va
 .vc{background:var(--ink2);border:1.5px solid var(--line);border-radius:16px;padding:18px 10px 14px;cursor:pointer;transition:all .18s;position:relative;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center}
 .vc:not(.vc-self):hover{border-color:var(--rose);transform:translateY(-2px);background:rgba(232,69,90,.05)}
 .vc.vc-voted{border-color:var(--rose);background:rgba(232,69,90,.08)}
-.vc.vc-self{opacity:.38;cursor:default}
 .vc-av{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--iris),var(--rose));display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700}
 .vc-name{font-size:13px;font-weight:600;word-break:break-word;max-width:100%;line-height:1.2}
 .vc-cnt{font-size:11px;color:var(--rose2);font-family:var(--mono);min-height:14px}
@@ -305,26 +302,30 @@ function pips(round,failed){
 
 /* ═══════════════ DETECTIVE SVG ICON ═══════════ */
 var DETECTIVE_SVG =
-  '<svg class="detective-icon" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">'+
-  /* Hat brim */ '<ellipse cx="40" cy="28" rx="24" ry="5" fill="#fff" opacity=".9"/>'+
-  /* Hat top  */ '<rect x="22" y="8" width="36" height="22" rx="6" fill="#1a1a1a"/>'+
-  /* Hat band */ '<rect x="22" y="24" width="36" height="5" fill="#444"/>'+
-  /* Face     */ '<ellipse cx="40" cy="44" rx="16" ry="15" fill="#f0f0f0"/>'+
-  /* Left eye */ '<circle cx="34" cy="40" r="4.5" fill="#fff"/>'+
-  '<circle cx="34" cy="40" r="2.5" fill="#111"/>'+
-  '<circle cx="35" cy="39" r=".8" fill="#fff"/>'+
-  /* Right eye*/ '<circle cx="46" cy="40" r="4.5" fill="#fff"/>'+
-  '<circle cx="46" cy="40" r="2.5" fill="#111"/>'+
-  '<circle cx="47" cy="39" r=".8" fill="#fff"/>'+
-  /* Eyebrows */ '<path d="M30 35.5 Q34 33.5 38 35.5" stroke="#222" stroke-width="1.6" fill="none" stroke-linecap="round"/>'+
-  '<path d="M42 35.5 Q46 33.5 50 35.5" stroke="#222" stroke-width="1.6" fill="none" stroke-linecap="round"/>'+
-  /* Nose     */ '<ellipse cx="40" cy="45" rx="2.5" ry="2" fill="#ccc"/>'+
-  /* Mouth    */ '<path d="M35 51 Q40 54.5 45 51" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/>'+
-  /* Coat collar */ '<path d="M24 58 Q30 54 40 56 Q50 54 56 58 Q52 72 40 74 Q28 72 24 58Z" fill="#111"/>'+
-  /* Tie      */ '<polygon points="40,56 37,62 40,70 43,62" fill="#fff"/>'+
-  /* Magnifier circle */ '<circle cx="62" cy="62" r="11" stroke="#fff" stroke-width="3.2" fill="rgba(255,255,255,.08)"/>'+
-  /* Magnifier lens glint */ '<path d="M57 57 Q59 55 62 56" stroke="rgba(255,255,255,.7)" stroke-width="1.5" fill="none" stroke-linecap="round"/>'+
-  /* Magnifier handle */ '<line x1="70" y1="70" x2="77" y2="77" stroke="#ccc" stroke-width="4" stroke-linecap="round"/>'+
+  '<svg class="detective-icon" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">'+
+  '<defs>'+
+    '<linearGradient id="hatG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e8c96d"/><stop offset="100%" stop-color="#b8922a"/></linearGradient>'+
+    '<linearGradient id="bodyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2a2a50"/><stop offset="100%" stop-color="#1a1a35"/></linearGradient>'+
+    '<linearGradient id="glassG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#a08aff"/><stop offset="100%" stop-color="#7b61ff"/></linearGradient>'+
+    '<radialGradient id="lensG" cx="38%" cy="35%"><stop offset="0%" stop-color="rgba(180,160,255,.22)"/><stop offset="100%" stop-color="rgba(123,97,255,.06)"/></radialGradient>'+
+  '</defs>'+
+  /* ── Hat brim ── */ '<ellipse cx="38" cy="30" rx="21" ry="4.5" fill="url(#hatG)" opacity=".95"/>'+
+  /* ── Hat top  ── */ '<path d="M19 30 Q19 10 38 10 Q57 10 57 30Z" fill="url(#hatG)"/>'+
+  /* ── Hat band ── */ '<rect x="19" y="26" width="38" height="5" rx="1" fill="#8a6a18" opacity=".8"/>'+
+  /* ── Silhouette body/head as one shape ── */
+  '<path d="M22 34 Q22 60 38 66 Q54 60 54 34 Q54 20 38 20 Q22 20 22 34Z" fill="#1a1a35"/>'+
+  /* ── Coat / shoulders ── */
+  '<path d="M14 96 Q16 72 28 66 Q33 70 38 71 Q43 70 48 66 Q60 72 62 96Z" fill="url(#bodyG)"/>'+
+  /* ── Gold tie ── */
+  '<polygon points="38,68 35,76 38,86 41,76" fill="#c9a84c" opacity=".9"/>'+
+  /* ── Magnifier ring (iris purple) ── */
+  '<circle cx="72" cy="70" r="14" stroke="url(#glassG)" stroke-width="4" fill="url(#lensG)"/>'+
+  /* ── Lens interior highlight ── */
+  '<path d="M64 62 Q67 59 71 61" stroke="rgba(200,185,255,.55)" stroke-width="1.8" fill="none" stroke-linecap="round"/>'+
+  /* ── Magnifier handle ── */
+  '<line x1="82" y1="80" x2="91" y2="89" stroke="url(#hatG)" stroke-width="5" stroke-linecap="round"/>'+
+  /* ── Handle cap ── */
+  '<circle cx="91" cy="89" r="2.5" fill="#b8922a"/>'+
   '</svg>';
 
 /* ═══════════════ QR MODAL ════════════════════ */
@@ -429,15 +430,24 @@ function startQrScanner(){
         {facingMode:'environment'},
         config,
         function(decoded){
-          // Success
+          if(!decoded) return;
           var code=null;
-          try{var u=new URL(decoded);code=u.searchParams.get('join');}
-          catch(e){if(decoded&&decoded.length>=4&&decoded.length<=7)code=decoded.replace(/\s/g,'').toUpperCase();}
+          // Try to parse as URL first
+          try{
+            var u=new URL(decoded.trim());
+            code=u.searchParams.get('join');
+          }catch(e){}
+          // If not a URL, treat raw string as code
+          if(!code){
+            var raw=decoded.trim().replace(/\s/g,'').toUpperCase();
+            if(raw.length>=4&&raw.length<=8) code=raw;
+          }
           if(code){
+            code=code.toUpperCase();
             var s=document.getElementById('scanStatus');
             if(s){s.textContent='✓ Code found: '+code;s.className='scan-note scan-ok';}
             stopScanner();
-            setTimeout(function(){joinByCode(code.toUpperCase());},500);
+            setTimeout(function(){joinByCode(code);},400);
           }
         },
         function(){/* scan miss - ignore */}
@@ -550,8 +560,6 @@ function showLobby(){
           '<p class="lobby-code">'+G.gameCode+'</p>'+
           '<p class="lobby-count">'+count+' player'+(count!==1?'s':'')+' in lobby</p>'+
         '</div>'+
-        '<!-- Small QR preview - click to expand -->'+
-        '<div id="qrSmall" class="qr-preview" onclick="showQrModal()" title="Click to expand QR"></div>'+
       '</div>'+
       '<!-- Show QR button -->'+
       '<button class="show-qr-btn" onclick="showQrModal()">'+
@@ -576,14 +584,6 @@ function showLobby(){
     '</div>'
   );
 
-  // Small QR preview (64×64)
-  setTimeout(function(){
-    var el=document.getElementById('qrSmall');
-    if(el&&typeof QRCode!=='undefined'){
-      el.innerHTML='';
-      new QRCode(el,{text:G.joinUrl,width:64,height:64,colorDark:'#0d0d14',colorLight:'#ffffff'});
-    }
-  },100);
 }
 
 /* ═══════════════ START GAME ═════════════════ */
@@ -738,7 +738,10 @@ function checkVoteResult(){
   var elim=top[0];
   var roles=G.gameData.roles||{};
   var impId=Object.keys(roles).find(function(id){return roles[id].role==='impostor';});
-  var crewWon=elim===impId;
+  var totalPlayers=Object.keys(players).length;
+  var impVotes=tally[impId]||0;
+  // Crew wins only if the majority (more than half) voted for the impostor
+  var crewWon=(elim===impId)&&(impVotes>Math.floor(totalPlayers/2));
   var round=G.gameData.round||1;
   var failedRounds=G.gameData.failedRounds?G.gameData.failedRounds.slice():[];
 
