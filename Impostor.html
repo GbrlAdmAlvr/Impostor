@@ -3,207 +3,451 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IMPOSTOR — Social Deduction Game</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<title>IMPOSTOR</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<!-- QR Scanner -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
+/* ═══════════════════════════════════════════
+   BASE
+═══════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#080810;--surface:#111120;--surface2:#1a1a30;
-  --border:#2a2a45;--text:#e8e8f0;--muted:#7070a0;
-  --accent:#ff4d6d;--accent2:#7b61ff;--green:#22d68a;--yellow:#f5c542;
-  --r:16px;--fh:'Syne',sans-serif;--fm:'Space Mono',monospace;
+  --ink:#0d0d14;
+  --ink2:#1a1a28;
+  --ink3:#252538;
+  --line:#2e2e48;
+  --line2:#3d3d5c;
+  --fog:#8888aa;
+  --dust:#b0b0cc;
+  --snow:#e8e8f2;
+  --gold:#c9a84c;
+  --gold2:#e8c96d;
+  --rose:#e8455a;
+  --rose2:#ff6b80;
+  --jade:#2ecf8a;
+  --jade2:#5de9a8;
+  --iris:#7b61ff;
+  --r:14px;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'DM Sans',system-ui,sans-serif;
+  --mono:'DM Mono',monospace;
 }
-html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--fh);-webkit-font-smoothing:antialiased}
+html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
 #app{min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
-.screen{width:100%;max-width:520px;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 60px;gap:20px}
 
-/* HOME */
-.home-screen{justify-content:center;position:relative;overflow:hidden}
-.home-bg{position:fixed;inset:0;pointer-events:none;
-  background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(123,97,255,.18) 0%,transparent 70%),
-             radial-gradient(ellipse 60% 40% at 80% 80%,rgba(255,77,109,.12) 0%,transparent 60%)}
-.home-content{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:40px;max-width:400px;width:100%}
-.logo-block{display:flex;flex-direction:column;align-items:center;gap:10px}
-.eye-icon{font-size:64px;animation:pulse-eye 2s ease-in-out infinite;filter:drop-shadow(0 0 24px rgba(255,77,109,.6))}
-@keyframes pulse-eye{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
-.logo-text{font-size:clamp(52px,14vw,80px);font-weight:800;letter-spacing:.12em;line-height:1;
-  background:linear-gradient(135deg,#ff4d6d,#7b61ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.tagline{font-family:var(--fm);font-size:11px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
-.home-actions{display:flex;flex-direction:column;gap:12px;width:100%}
-.home-footer{color:var(--muted);font-size:13px;font-family:var(--fm)}
+/* ═══════════════════════════════════════════
+   SCREEN WRAPPER
+═══════════════════════════════════════════ */
+.screen{
+  width:100%;max-width:480px;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:36px 20px 72px;gap:18px;
+  position:relative;
+}
 
-/* BUTTONS */
-.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px 24px;border:none;
-  border-radius:var(--r);font-family:var(--fh);font-size:16px;font-weight:700;letter-spacing:.05em;
-  cursor:pointer;transition:transform .15s,box-shadow .15s}
-.btn:hover:not(:disabled){transform:translateY(-2px)}
-.btn:active{transform:translateY(0)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-primary{background:linear-gradient(135deg,#ff4d6d,#c0392b);color:#fff;box-shadow:0 8px 30px rgba(255,77,109,.35)}
-.btn-primary:hover:not(:disabled){box-shadow:0 12px 40px rgba(255,77,109,.55)}
-.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover:not(:disabled){border-color:var(--accent2)}
-.btn-ghost{background:transparent;color:var(--accent2);border:2px solid var(--accent2);max-width:220px}
-.btn-outline-red{background:transparent;color:var(--accent);border:2px solid var(--accent)}
+/* ═══════════════════════════════════════════
+   HOME
+═══════════════════════════════════════════ */
+.home-screen{justify-content:center}
+.home-aurora{
+  position:fixed;inset:0;pointer-events:none;overflow:hidden;
+}
+.home-aurora::before{
+  content:'';position:absolute;width:600px;height:600px;border-radius:50%;
+  top:-200px;left:50%;transform:translateX(-50%);
+  background:radial-gradient(circle,rgba(123,97,255,.14) 0%,transparent 70%);
+}
+.home-aurora::after{
+  content:'';position:absolute;width:400px;height:400px;border-radius:50%;
+  bottom:-100px;right:-100px;
+  background:radial-gradient(circle,rgba(232,69,90,.10) 0%,transparent 70%);
+}
+.home-inner{
+  position:relative;z-index:1;width:100%;
+  display:flex;flex-direction:column;align-items:center;gap:48px;
+}
+.logo-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.logo-eye{
+  font-size:52px;line-height:1;
+  filter:drop-shadow(0 0 20px rgba(232,69,90,.5));
+  animation:breathe 3s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{transform:scale(1);filter:drop-shadow(0 0 20px rgba(232,69,90,.5))}50%{transform:scale(1.08);filter:drop-shadow(0 0 32px rgba(232,69,90,.8))}}
+.logo-title{
+  font-family:var(--serif);
+  font-size:clamp(56px,15vw,88px);
+  font-weight:700;letter-spacing:.06em;line-height:.9;
+  background:linear-gradient(170deg,var(--snow) 0%,var(--gold2) 45%,var(--rose) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.logo-sub{
+  font-family:var(--mono);font-size:10px;letter-spacing:.3em;
+  text-transform:uppercase;color:var(--fog);
+}
+.home-btns{display:flex;flex-direction:column;gap:12px;width:100%}
+.home-note{font-size:12px;color:var(--fog);font-family:var(--mono);letter-spacing:.05em;text-align:center}
 
-/* PANEL */
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:36px 28px;
-  width:100%;display:flex;flex-direction:column;gap:18px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
-.panel-title{font-size:28px;font-weight:800}
-.panel-sub{font-size:14px;color:var(--muted)}
-.code-badge{font-family:var(--fm);letter-spacing:.2em;background:var(--surface2);border:1px solid var(--border);
-  padding:2px 10px;border-radius:8px;font-size:16px;color:var(--accent)}
-.input-field{width:100%;padding:14px 18px;background:var(--surface2);border:2px solid var(--border);
-  border-radius:var(--r);color:var(--text);font-family:var(--fh);font-size:16px;outline:none;transition:border-color .2s}
-.input-field:focus{border-color:var(--accent2)}
-.input-field::placeholder{color:var(--muted)}
-.back-btn{background:none;border:none;color:var(--muted);font-family:var(--fh);font-size:14px;
-  cursor:pointer;align-self:flex-start;transition:color .15s}
-.back-btn:hover{color:var(--text)}
+/* ═══════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════ */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:15px 24px;border:none;border-radius:var(--r);
+  font-family:var(--sans);font-size:15px;font-weight:600;letter-spacing:.02em;
+  cursor:pointer;transition:all .18s ease;position:relative;overflow:hidden;
+}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .18s}
+.btn:hover:not(:disabled)::after{background:rgba(255,255,255,.06)}
+.btn:active:not(:disabled){transform:scale(.98)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
 
-/* DIVIDER */
-.or-divider{display:flex;align-items:center;gap:12px;width:100%;color:var(--muted);font-size:12px;font-family:var(--fm)}
-.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.btn-gold{
+  background:linear-gradient(135deg,#b8922a,var(--gold),#d4a840);
+  color:#1a1200;font-weight:700;
+  box-shadow:0 4px 20px rgba(201,168,76,.3);
+}
+.btn-ghost{
+  background:transparent;color:var(--snow);
+  border:1px solid var(--line2);
+}
+.btn-ghost:hover:not(:disabled){border-color:var(--dust)}
+.btn-danger{
+  background:rgba(232,69,90,.12);color:var(--rose2);
+  border:1px solid rgba(232,69,90,.3);
+}
+.btn-subtle{
+  background:var(--ink3);color:var(--dust);
+  border:1px solid var(--line);font-size:14px;
+}
+.btn-iris{
+  background:linear-gradient(135deg,#6448e8,var(--iris));
+  color:#fff;box-shadow:0 4px 20px rgba(123,97,255,.3);
+}
 
-/* QR SCANNER */
-.scanner-wrap{width:100%;border-radius:16px;overflow:hidden;border:2px solid var(--border);background:#000;position:relative}
-.scanner-wrap video{width:100%!important;height:auto!important}
+/* ═══════════════════════════════════════════
+   CARD / PANEL
+═══════════════════════════════════════════ */
+.card{
+  width:100%;background:var(--ink2);
+  border:1px solid var(--line);border-radius:20px;
+  padding:28px 24px;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+}
+.card-sm{padding:20px 20px}
+.card-title{
+  font-family:var(--serif);font-size:26px;font-weight:700;
+  line-height:1.1;color:var(--snow);
+}
+.card-sub{font-size:13px;color:var(--fog);line-height:1.6;margin-top:4px}
+
+.input-field{
+  width:100%;padding:13px 16px;
+  background:var(--ink3);border:1px solid var(--line2);
+  border-radius:var(--r);color:var(--snow);
+  font-family:var(--sans);font-size:15px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.input-field:focus{border-color:var(--iris);box-shadow:0 0 0 3px rgba(123,97,255,.15)}
+.input-field::placeholder{color:var(--fog)}
+
+.back-btn{
+  background:none;border:none;color:var(--fog);
+  font-family:var(--sans);font-size:14px;cursor:pointer;
+  align-self:flex-start;display:flex;align-items:center;gap:6px;
+  transition:color .15s;padding:0;
+}
+.back-btn:hover{color:var(--snow)}
+
+.divider{
+  display:flex;align-items:center;gap:12px;width:100%;
+  color:var(--fog);font-size:11px;font-family:var(--mono);letter-spacing:.1em;
+}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line)}
+
+/* CODE BADGE */
+.code-chip{
+  display:inline-flex;align-items:center;
+  font-family:var(--mono);letter-spacing:.22em;font-size:15px;
+  background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.3);
+  color:var(--gold2);padding:4px 14px;border-radius:8px;
+}
+
+/* ═══════════════════════════════════════════
+   QR SCANNER
+═══════════════════════════════════════════ */
+.scanner-shell{
+  width:100%;border-radius:16px;overflow:hidden;
+  border:1px solid var(--line2);background:#000;
+}
 #qr-reader{width:100%!important}
-#qr-reader video{border-radius:14px}
+#qr-reader video{border-radius:0!important;width:100%!important}
 #qr-reader img{display:none!important}
 #qr-reader__dashboard_section_csr button{
-  background:var(--accent2)!important;color:#fff!important;border:none!important;
-  padding:10px 20px!important;border-radius:8px!important;font-family:var(--fh)!important;
-  font-size:14px!important;cursor:pointer!important;margin-top:8px!important}
-#qr-reader__status_span{color:var(--muted)!important;font-size:12px!important;font-family:var(--fm)!important}
-#qr-reader__dashboard_section_swaplink{color:var(--accent2)!important;font-size:13px!important}
-.scan-status{font-size:13px;color:var(--muted);font-family:var(--fm);text-align:center}
-.scan-success{color:var(--green)!important}
+  background:var(--iris)!important;color:#fff!important;border:none!important;
+  padding:10px 20px!important;border-radius:8px!important;
+  font-family:var(--sans)!important;font-size:14px!important;
+  cursor:pointer!important;margin-top:8px!important}
+#qr-reader__status_span{color:var(--fog)!important;font-size:11px!important;font-family:var(--mono)!important}
+#qr-reader__dashboard_section_swaplink{color:var(--iris)!important;font-size:12px!important}
+.scan-note{font-size:12px;color:var(--fog);font-family:var(--mono);text-align:center;letter-spacing:.05em}
+.scan-ok{color:var(--jade)!important}
 
-/* LOBBY */
-.lobby-header{width:100%;display:flex;justify-content:space-between;align-items:center;
-  background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px 24px;gap:16px}
-.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:6px}
-.big-code{font-family:var(--fm);font-size:clamp(28px,8vw,44px);font-weight:700;letter-spacing:.25em;color:var(--accent)}
-.qr-box{background:#fff;border-radius:12px;padding:8px;flex-shrink:0}
-.player-count-badge{font-family:var(--fm);font-size:12px;color:var(--muted);
-  background:var(--surface2);border:1px solid var(--border);padding:4px 12px;border-radius:20px}
-.player-grid{width:100%;display:flex;flex-wrap:wrap;gap:10px}
-.player-chip{display:flex;align-items:center;gap:10px;background:var(--surface);
-  border:1px solid var(--border);border-radius:50px;padding:10px 16px;animation:pop-in .3s ease}
-@keyframes pop-in{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
-.host-chip{border-color:var(--yellow)}
-.player-avatar{width:32px;height:32px;border-radius:50%;
-  background:linear-gradient(135deg,var(--accent2),var(--accent));
-  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+/* ═══════════════════════════════════════════
+   LOBBY
+═══════════════════════════════════════════ */
+.lobby-top{
+  width:100%;display:flex;justify-content:space-between;align-items:flex-start;
+  background:var(--ink2);border:1px solid var(--line);border-radius:20px;
+  padding:22px 24px;gap:16px;
+}
+.lobby-code-label{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--fog);margin-bottom:6px}
+.lobby-code{font-family:var(--mono);font-size:clamp(30px,9vw,46px);font-weight:500;letter-spacing:.28em;color:var(--gold2);line-height:1}
+.lobby-count{font-family:var(--mono);font-size:11px;color:var(--fog);margin-top:8px;letter-spacing:.1em}
+.qr-wrap{background:#fff;border-radius:10px;padding:7px;flex-shrink:0;align-self:flex-start}
+.player-grid{width:100%;display:flex;flex-wrap:wrap;gap:8px}
+.p-chip{
+  display:flex;align-items:center;gap:8px;
+  background:var(--ink2);border:1px solid var(--line);
+  border-radius:40px;padding:8px 14px;
+  animation:chipIn .25s ease;font-size:14px;
+}
+@keyframes chipIn{from{transform:scale(.82);opacity:0}to{transform:scale(1);opacity:1}}
+.p-chip.is-host{border-color:rgba(201,168,76,.4);background:rgba(201,168,76,.06)}
+.p-av{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--iris),var(--rose));
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;
+}
 .lobby-footer{width:100%;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
-.waiting-text{font-size:15px;color:var(--muted)}
-.hint{font-size:13px;color:var(--muted);font-family:var(--fm);line-height:1.7}
+.lobby-status{font-size:14px;color:var(--fog)}
+.lobby-hint{font-size:12px;color:var(--fog);font-family:var(--mono);line-height:1.8;letter-spacing:.03em}
 
-/* ROLE */
+/* ═══════════════════════════════════════════
+   ROLE CARD
+═══════════════════════════════════════════ */
 .role-screen{justify-content:center}
-.role-card{width:100%;border-radius:28px;padding:44px 28px;display:flex;flex-direction:column;
-  align-items:center;text-align:center;gap:16px;border:1px solid var(--border);
-  animation:card-reveal .5s cubic-bezier(.34,1.56,.64,1)}
-@keyframes card-reveal{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
-.card-impostor{background:linear-gradient(160deg,#1a0810,#2d0818);border-color:rgba(255,77,109,.3)}
-.card-crew{background:linear-gradient(160deg,#081a12,#0d2d1a);border-color:rgba(34,214,138,.3)}
-.role-eyeball{font-size:56px;animation:pulse-eye 1.5s ease-in-out infinite}
-.role-label{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
-.role-title{font-size:52px;font-weight:800;letter-spacing:.1em;line-height:1}
-.card-impostor .role-title{color:var(--accent)}
-.card-crew .role-title{color:var(--green)}
-.role-divider{width:60px;height:2px;background:var(--border)}
-.role-word-label{font-size:12px;text-transform:uppercase;letter-spacing:.2em;color:var(--muted)}
-.role-word{font-size:36px;font-weight:800;
-  background:linear-gradient(135deg,var(--text),var(--muted));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.role-hint{font-size:14px;color:var(--muted);font-family:var(--fm)}
+.role-card{
+  width:100%;border-radius:24px;padding:44px 28px;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;
+  animation:cardPop .5s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;
+}
+@keyframes cardPop{from{transform:scale(.84);opacity:0}to{transform:scale(1);opacity:1}}
+.role-card::before{content:'';position:absolute;inset:0;opacity:.06}
+.rc-crew{background:linear-gradient(160deg,#071a10,#0d2a18);border:1px solid rgba(46,207,138,.25)}
+.rc-crew::before{background:var(--jade)}
+.rc-imp{background:linear-gradient(160deg,#1a0710,#2a0d18);border:1px solid rgba(232,69,90,.25)}
+.rc-imp::before{background:var(--rose)}
+.role-orb{font-size:48px;line-height:1;animation:breathe 2s ease-in-out infinite}
+.role-eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--fog)}
+.role-name{
+  font-family:var(--serif);font-size:clamp(42px,12vw,62px);
+  font-weight:700;letter-spacing:.08em;line-height:1;
+}
+.rc-crew .role-name{color:var(--jade2)}
+.rc-imp .role-name{color:var(--rose2)}
+.role-sep{width:48px;height:1px;background:var(--line2)}
+.role-wlabel{font-family:var(--mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--fog)}
+/* THE FIX: word is responsive, wraps, never overflows */
+.role-word{
+  font-family:var(--serif);
+  font-size:clamp(28px,8vw,48px);
+  font-weight:700;line-height:1.1;
+  color:var(--snow);
+  word-break:break-word;
+  hyphens:auto;
+  text-align:center;
+  max-width:100%;
+  padding:0 8px;
+}
+.role-hint{font-size:13px;color:var(--fog);line-height:1.6;font-family:var(--sans);max-width:280px}
 
-/* PHASE BADGE */
-.phase-badge{font-family:var(--fm);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
-  background:var(--surface2);border:1px solid var(--border);padding:6px 16px;border-radius:20px;color:var(--muted)}
+/* ═══════════════════════════════════════════
+   PHASE HEADER
+═══════════════════════════════════════════ */
+.phase-row{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.phase-pill{
+  font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+  background:var(--ink3);border:1px solid var(--line2);
+  padding:6px 14px;border-radius:20px;color:var(--fog);white-space:nowrap;
+}
+.round-pip-wrap{display:flex;gap:6px;align-items:center}
+.r-pip{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--line2);transition:background .3s,box-shadow .3s;
+}
+.r-pip.active{background:var(--gold);box-shadow:0 0 6px rgba(201,168,76,.6)}
+.r-pip.done-fail{background:var(--rose);box-shadow:0 0 6px rgba(232,69,90,.4)}
+.r-pip.done-ok{background:var(--jade);box-shadow:0 0 6px rgba(46,207,138,.4)}
 
-/* DISCUSS */
-.your-word-bar{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;
-  padding:14px 20px;display:flex;align-items:center;justify-content:space-between;font-size:15px;gap:12px;flex-wrap:wrap}
-.role-tag{font-size:12px;padding:4px 12px;border-radius:20px;font-family:var(--fm);flex-shrink:0}
-.role-tag.real{background:rgba(34,214,138,.15);color:var(--green)}
-.role-tag.impostor{background:rgba(255,77,109,.15);color:var(--accent)}
-.player-list-vert{display:flex;flex-direction:column;gap:8px;width:100%}
-.player-row{display:flex;align-items:center;gap:12px;background:var(--surface);
-  border:1px solid var(--border);border-radius:12px;padding:12px 16px}
-.my-row{border-color:var(--accent2);background:rgba(123,97,255,.08)}
-.avatar-sm{width:32px;height:32px;border-radius:50%;flex-shrink:0;
-  background:linear-gradient(135deg,var(--accent2),var(--accent));
-  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
-.order-label{font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:10px}
+/* ═══════════════════════════════════════════
+   WORD BAR (discuss / vote screens)
+═══════════════════════════════════════════ */
+.word-bar{
+  width:100%;background:var(--ink2);border:1px solid var(--line);
+  border-radius:14px;padding:14px 18px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+}
+.word-bar-label{font-size:12px;color:var(--fog);font-family:var(--mono);letter-spacing:.08em;flex-shrink:0}
+/* word in bar also responsive */
+.word-bar-val{
+  font-family:var(--serif);
+  font-size:clamp(18px,5vw,26px);
+  font-weight:700;color:var(--snow);
+  word-break:break-word;flex:1;text-align:right;
+}
+.rtag{
+  font-size:11px;padding:4px 10px;border-radius:16px;
+  font-family:var(--mono);letter-spacing:.06em;flex-shrink:0;
+}
+.rtag-crew{background:rgba(46,207,138,.12);color:var(--jade2)}
+.rtag-imp{background:rgba(232,69,90,.12);color:var(--rose2)}
 
-/* VOTE */
-.vote-title{font-size:32px;font-weight:800}
-.vote-sub{font-size:14px;color:var(--muted);font-family:var(--fm)}
-.vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%}
-.vote-card{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:20px 12px;
-  cursor:pointer;transition:all .2s;position:relative;display:flex;flex-direction:column;
-  align-items:center;gap:8px;text-align:center}
-.vote-card:not(.vote-self):hover{border-color:var(--accent);transform:translateY(-2px)}
-.vote-card.voted{border-color:var(--accent);background:rgba(255,77,109,.1)}
-.vote-card.vote-self{opacity:.4;cursor:default}
-.vote-avatar{width:50px;height:50px;border-radius:50%;
-  background:linear-gradient(135deg,var(--accent2),var(--accent));
-  display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
-.vote-name{font-size:14px;font-weight:700}
-.vote-count{font-size:12px;color:var(--accent);font-family:var(--fm);min-height:16px}
-.vote-check{position:absolute;top:8px;right:10px;color:var(--accent);font-size:18px;font-weight:800}
-.voted-msg{color:var(--green);font-size:15px;text-align:center}
+/* ═══════════════════════════════════════════
+   PLAYER ROWS
+═══════════════════════════════════════════ */
+.plist{display:flex;flex-direction:column;gap:8px;width:100%}
+.prow{
+  display:flex;align-items:center;gap:12px;
+  background:var(--ink2);border:1px solid var(--line);
+  border-radius:12px;padding:11px 14px;font-size:14px;
+}
+.prow-me{border-color:rgba(123,97,255,.4);background:rgba(123,97,255,.06)}
+.av-sm{
+  width:30px;height:30px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--iris),var(--rose));
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;
+}
+.prow-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sec-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:var(--fog);margin-bottom:8px}
 
-/* RESULT */
+/* ═══════════════════════════════════════════
+   VOTE GRID
+═══════════════════════════════════════════ */
+.vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.vc{
+  background:var(--ink2);border:1.5px solid var(--line);
+  border-radius:16px;padding:18px 10px 14px;
+  cursor:pointer;transition:all .18s;position:relative;
+  display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center;
+}
+.vc:not(.vc-self):hover{border-color:var(--rose);transform:translateY(-2px);background:rgba(232,69,90,.05)}
+.vc.vc-voted{border-color:var(--rose);background:rgba(232,69,90,.08)}
+.vc.vc-self{opacity:.38;cursor:default}
+.vc-av{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--iris),var(--rose));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;
+}
+.vc-name{
+  font-size:13px;font-weight:600;
+  word-break:break-word;max-width:100%;line-height:1.2;
+}
+.vc-cnt{font-size:11px;color:var(--rose2);font-family:var(--mono);min-height:14px}
+.vc-check{position:absolute;top:7px;right:9px;color:var(--rose2);font-size:15px;font-weight:700}
+.vote-msg{font-size:14px;color:var(--jade);text-align:center;font-family:var(--mono);letter-spacing:.05em}
+
+/* ═══════════════════════════════════════════
+   ROUND FAILED OVERLAY
+═══════════════════════════════════════════ */
+.round-failed-card{
+  width:100%;border-radius:20px;
+  background:linear-gradient(160deg,#1c1008,#2a1a0a);
+  border:1px solid rgba(201,168,76,.25);
+  padding:36px 24px;display:flex;flex-direction:column;
+  align-items:center;text-align:center;gap:14px;
+  animation:cardPop .4s ease;
+}
+.rf-icon{font-size:48px;animation:breathe 2s ease-in-out infinite}
+.rf-title{font-family:var(--serif);font-size:30px;font-weight:700;color:var(--gold2)}
+.rf-sub{font-size:14px;color:var(--fog);line-height:1.6;max-width:300px}
+.rf-tries{
+  font-family:var(--mono);font-size:11px;letter-spacing:.15em;
+  color:var(--gold);background:rgba(201,168,76,.1);
+  border:1px solid rgba(201,168,76,.2);padding:6px 16px;border-radius:20px;
+}
+
+/* ═══════════════════════════════════════════
+   RESULT
+═══════════════════════════════════════════ */
 .result-screen{justify-content:center}
-.result-card{width:100%;border-radius:28px;padding:36px 24px;display:flex;flex-direction:column;
-  align-items:center;text-align:center;gap:18px;border:1px solid var(--border);animation:card-reveal .5s ease}
-.crew-win{background:linear-gradient(160deg,#081a12,#0d2a18);border-color:rgba(34,214,138,.3)}
-.imp-win{background:linear-gradient(160deg,#1a0810,#280d18);border-color:rgba(255,77,109,.3)}
-.result-icon{font-size:60px;animation:pulse-eye 1.5s ease-in-out infinite}
-.result-winner{font-size:36px;font-weight:800;letter-spacing:.08em}
-.crew-win .result-winner{color:var(--green)}
-.imp-win .result-winner{color:var(--accent)}
-.result-detail{font-size:15px;color:var(--muted);line-height:1.6}
-.reveal-block{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);
-  border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
-.reveal-row{display:flex;justify-content:space-between;align-items:center;font-size:14px}
-.reveal-label{color:var(--muted);font-size:13px}
-.reveal-val{font-weight:700}
-.tally-label{font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:10px;text-align:left}
-.tally-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:14px}
-.tally-name{min-width:80px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px}
-.tally-bar{flex:1;background:var(--surface2);border-radius:6px;overflow:hidden;height:24px}
-.tally-fill{height:100%;min-width:28px;background:linear-gradient(90deg,var(--accent),var(--accent2));
-  border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:12px;font-weight:700;transition:width .8s ease}
+.result-card{
+  width:100%;border-radius:24px;padding:36px 24px;
+  display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;
+  animation:cardPop .5s ease;
+}
+.result-crew{background:linear-gradient(160deg,#071a10,#0d2a18);border:1px solid rgba(46,207,138,.25)}
+.result-imp{background:linear-gradient(160deg,#1a0710,#2a0d18);border:1px solid rgba(232,69,90,.25)}
+.result-icon{font-size:56px;animation:breathe 2s ease-in-out infinite}
+.result-headline{
+  font-family:var(--serif);font-size:clamp(28px,8vw,40px);
+  font-weight:700;letter-spacing:.06em;
+}
+.result-crew .result-headline{color:var(--jade2)}
+.result-imp .result-headline{color:var(--rose2)}
+.result-copy{font-size:14px;color:var(--fog);line-height:1.65;max-width:320px}
+.reveal-box{
+  width:100%;background:rgba(255,255,255,.03);
+  border:1px solid var(--line);border-radius:14px;padding:16px;
+  display:flex;flex-direction:column;gap:10px;
+}
+.rev-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;gap:12px}
+.rev-lbl{font-size:12px;color:var(--fog);font-family:var(--mono);white-space:nowrap}
+/* fixed: word in reveal also wraps */
+.rev-val{
+  font-weight:700;text-align:right;
+  word-break:break-word;max-width:60%;
+}
+.tally-section{width:100%}
+.tally-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:var(--fog);margin-bottom:10px}
+.t-row{display:flex;align-items:center;gap:10px;margin-bottom:7px;font-size:13px}
+.t-name{width:80px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dust)}
+.t-track{flex:1;background:var(--ink3);border-radius:4px;overflow:hidden;height:22px}
+.t-fill{
+  height:100%;min-width:22px;
+  background:linear-gradient(90deg,var(--rose),var(--iris));
+  border-radius:4px;display:flex;align-items:center;
+  padding:0 8px;font-size:11px;font-weight:700;font-family:var(--mono);
+  transition:width .7s ease;
+}
 
-/* TOAST */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-  background:var(--surface2);border:1px solid var(--border);padding:12px 24px;border-radius:12px;
-  font-size:14px;color:var(--accent);font-family:var(--fm);box-shadow:0 8px 30px rgba(0,0,0,.5);
-  animation:toast-in .3s ease;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
-@keyframes toast-in{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+/* ═══════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════ */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(0);
+  background:var(--ink3);border:1px solid var(--line2);
+  padding:11px 22px;border-radius:12px;font-size:13px;font-family:var(--mono);
+  color:var(--rose2);letter-spacing:.05em;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  animation:toastIn .25s ease;z-index:999;
+  white-space:nowrap;max-width:88vw;overflow:hidden;text-overflow:ellipsis;
+}
+@keyframes toastIn{from{transform:translateX(-50%) translateY(16px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 
-@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
-.shake{animation:shake .4s ease;border-color:var(--accent)!important}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.shake{animation:shake .35s ease;border-color:var(--rose)!important}
 
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--ink)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-// ── FIREBASE ───────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   FIREBASE
+══════════════════════════════════════════ */
 firebase.initializeApp({
   apiKey:"AIzaSyAtVf0fOSQhqNajmYrFGyZWBUX07gL3hRg",
   authDomain:"impostor-7bba3.firebaseapp.com",
@@ -215,7 +459,9 @@ firebase.initializeApp({
 });
 var db = firebase.database();
 
-// ── WORD BANK ──────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   WORD BANK  (real / impostor pairs)
+══════════════════════════════════════════ */
 var WORDS = [
   {real:"Piano",imp:"Keyboard"},{real:"Shark",imp:"Dolphin"},
   {real:"Pizza",imp:"Flatbread"},{real:"Astronaut",imp:"Cosmonaut"},
@@ -237,449 +483,535 @@ var WORDS = [
   {real:"Trampoline",imp:"Mattress"},{real:"Walrus",imp:"Seal"}
 ];
 
-// ── STATE ──────────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
 var G = {
-  view:'home', gameCode:null, playerId:null, playerName:null,
-  isHost:false, role:null, myWord:null, players:{},
-  gameData:null, votedAlready:false, dbOff:null, qrScanner:null
+  view:'home',
+  gameCode:null, playerId:null, playerName:null,
+  isHost:false, role:null, myWord:null,
+  players:{}, gameData:null,
+  votedAlready:false, dbOff:null, qrScanner:null
 };
 
-// ── UTILS ──────────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════ */
 function genCode(){ return Math.random().toString(36).substring(2,7).toUpperCase(); }
-function genId(){ return Math.random().toString(36).substring(2,13); }
-function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function genId()  { return Math.random().toString(36).substring(2,13); }
+function rnd(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
 function shuffle(arr){
   var a=arr.slice();
   for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
   return a;
 }
-function toast(msg){
-  var o=document.querySelector('.toast'); if(o)o.remove();
-  var el=document.createElement('div'); el.className='toast'; el.textContent=msg;
-  document.body.appendChild(el); setTimeout(function(){if(el.parentNode)el.remove();},3000);
+function toast(msg,col){
+  var o=document.querySelector('.toast');if(o)o.remove();
+  var el=document.createElement('div');el.className='toast';
+  el.textContent=msg;
+  if(col)el.style.color=col;
+  document.body.appendChild(el);
+  setTimeout(function(){if(el.parentNode)el.remove();},3200);
 }
 function shake(id){
-  var el=document.getElementById(id); if(!el)return;
-  el.classList.remove('shake'); void el.offsetWidth;
-  el.classList.add('shake'); setTimeout(function(){el.classList.remove('shake');},500);
+  var el=document.getElementById(id);if(!el)return;
+  el.classList.remove('shake');void el.offsetWidth;
+  el.classList.add('shake');setTimeout(function(){el.classList.remove('shake');},400);
 }
 var root=document.getElementById('app');
 function R(html){ root.innerHTML=html; }
-
 function stopScanner(){
-  if(G.qrScanner){
-    try{ G.qrScanner.stop().catch(function(){}); } catch(e){}
-    G.qrScanner=null;
-  }
+  if(G.qrScanner){ try{ G.qrScanner.stop().catch(function(){}); }catch(e){} G.qrScanner=null; }
 }
 
-// ── HOME ──────────────────────────────────────────────────────────────────
+/* Render round pips (max 3) */
+function renderPips(round, failedRounds){
+  var html='';
+  for(var i=1;i<=3;i++){
+    var cls='r-pip';
+    if(i<round){
+      // past round — did they fail it?
+      if(failedRounds && failedRounds.indexOf(i)>=0) cls+=' done-fail';
+      else cls+=' done-ok';
+    } else if(i===round){
+      cls+=' active';
+    }
+    html+='<div class="'+cls+'"></div>';
+  }
+  return '<div class="round-pip-wrap">'+html+'</div>';
+}
+
+/* ══════════════════════════════════════════
+   HOME
+══════════════════════════════════════════ */
 function showHome(){
   stopScanner();
   G.view='home';
   if(G.dbOff){ G.dbOff(); G.dbOff=null; }
   R(
     '<div class="screen home-screen">'+
-    '<div class="home-bg"></div>'+
-    '<div class="home-content">'+
-      '<div class="logo-block">'+
-        '<div class="eye-icon">👁</div>'+
-        '<h1 class="logo-text">IMPOSTOR</h1>'+
-        '<p class="tagline">Social Deduction · Real Time · No Mercy</p>'+
+    '<div class="home-aurora"></div>'+
+    '<div class="home-inner">'+
+      '<div class="logo-wrap">'+
+        '<div class="logo-eye">👁</div>'+
+        '<h1 class="logo-title">IMPOSTOR</h1>'+
+        '<p class="logo-sub">Social Deduction · Real Time</p>'+
       '</div>'+
-      '<div class="home-actions">'+
-        '<button class="btn btn-primary" onclick="hostGame()">⚡ Host a Game</button>'+
-        '<button class="btn btn-secondary" onclick="showJoin()">🔍 Join a Game</button>'+
+      '<div class="home-btns" style="width:100%">'+
+        '<button class="btn btn-gold" onclick="hostGame()">⚡&nbsp; Host a Game</button>'+
+        '<button class="btn btn-ghost" onclick="showJoin()">🔍&nbsp; Join a Game</button>'+
       '</div>'+
-      '<div class="home-footer"><p>Scan a QR code or enter a game code to join</p></div>'+
+      '<p class="home-note">Scan QR code or enter game code to join</p>'+
     '</div>'+
     '</div>'
   );
 }
 
-// ── JOIN SCREEN (QR scanner + manual code) ────────────────────────────────
+/* ══════════════════════════════════════════
+   JOIN SCREEN
+══════════════════════════════════════════ */
 function showJoin(){
   stopScanner();
   R(
-    '<div class="screen" style="justify-content:flex-start;padding-top:40px">'+
-    '<div class="panel" style="gap:20px">'+
+    '<div class="screen" style="padding-top:32px">'+
+    '<div class="card" style="display:flex;flex-direction:column;gap:18px">'+
       '<button class="back-btn" onclick="showHome()">← Back</button>'+
-      '<h2 class="panel-title">Join a Game</h2>'+
+      '<div><p class="card-title">Join a Game</p><p class="card-sub">Scan the host\'s QR code or enter the code</p></div>'+
 
-      '<div style="width:100%">'+
-        '<p style="font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:10px;font-family:var(--fm)">📷 Scan QR Code</p>'+
-        '<div class="scanner-wrap"><div id="qr-reader"></div></div>'+
-        '<p class="scan-status" id="scanStatus">Point your camera at the host\'s QR code</p>'+
+      '<div>'+
+        '<p class="sec-label">📷 Camera Scanner</p>'+
+        '<div class="scanner-shell"><div id="qr-reader"></div></div>'+
+        '<p class="scan-note" id="scanStatus" style="margin-top:8px">Point camera at QR code</p>'+
       '</div>'+
 
-      '<div class="or-divider">or enter code manually</div>'+
+      '<div class="divider">or type code</div>'+
 
-      '<input id="codeInput" class="input-field" type="text" placeholder="e.g. ABC12" maxlength="5" autocomplete="off"'+
-        ' style="text-transform:uppercase;letter-spacing:.2em;font-size:22px;text-align:center"/>'+
-      '<button class="btn btn-primary" onclick="joinByCode()">Join →</button>'+
+      '<input id="codeInput" class="input-field" type="text" placeholder="e.g. AB3XY" maxlength="5"'+
+        ' autocomplete="off" style="text-transform:uppercase;letter-spacing:.25em;font-size:20px;text-align:center"/>'+
+      '<button class="btn btn-gold" onclick="joinByCode()">Join &rarr;</button>'+
     '</div>'+
     '</div>'
   );
   document.getElementById('codeInput').addEventListener('keydown',function(e){if(e.key==='Enter')joinByCode();});
 
-  // Start QR scanner
   setTimeout(function(){
-    if(typeof Html5Qrcode === 'undefined'){ return; }
+    if(typeof Html5Qrcode==='undefined') return;
     try{
-      var scanner = new Html5Qrcode('qr-reader');
-      G.qrScanner = scanner;
-      scanner.start(
-        { facingMode:'environment' },
-        { fps:10, qrbox:{ width:200, height:200 } },
-        function(decodedText){
-          // Parse the join URL
-          var code = null;
-          try{
-            var url = new URL(decodedText);
-            code = url.searchParams.get('join');
-          } catch(e){
-            // Maybe it's just the code itself
-            if(decodedText && decodedText.length >= 4 && decodedText.length <= 6){
-              code = decodedText.toUpperCase();
-            }
-          }
+      var scanner=new Html5Qrcode('qr-reader');
+      G.qrScanner=scanner;
+      scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:220}},
+        function(txt){
+          var code=null;
+          try{ var u=new URL(txt); code=u.searchParams.get('join'); }
+          catch(e){ if(txt&&txt.length>=4&&txt.length<=6) code=txt.toUpperCase(); }
           if(code){
-            var statusEl = document.getElementById('scanStatus');
-            if(statusEl){ statusEl.textContent='✅ Code found: '+code; statusEl.className='scan-status scan-success'; }
+            var s=document.getElementById('scanStatus');
+            if(s){s.textContent='✓ Found: '+code;s.className='scan-note scan-ok';}
             stopScanner();
-            setTimeout(function(){ joinByCode(code.toUpperCase()); }, 400);
+            setTimeout(function(){ joinByCode(code.toUpperCase()); },400);
           }
         },
-        function(){ /* scan miss, ignore */ }
-      ).catch(function(err){ 
-        var statusEl=document.getElementById('scanStatus');
-        if(statusEl){ statusEl.textContent='Camera unavailable — enter code manually'; }
+        function(){}
+      ).catch(function(){
+        var s=document.getElementById('scanStatus');
+        if(s) s.textContent='Camera unavailable — type code below';
       });
     } catch(e){
-      var statusEl=document.getElementById('scanStatus');
-      if(statusEl){ statusEl.textContent='Camera unavailable — enter code manually'; }
+      var s=document.getElementById('scanStatus');
+      if(s) s.textContent='Camera unavailable — type code below';
     }
-  }, 300);
+  },300);
 }
 
-// ── HOST GAME ─────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   HOST
+══════════════════════════════════════════ */
 function hostGame(){
-  G.gameCode = genCode();
-  G.playerId = genId();
-  G.isHost   = true;
-  showNameEntry(true, G.gameCode);
+  G.gameCode=genCode(); G.playerId=genId(); G.isHost=true;
+  showNameEntry(true,G.gameCode);
 }
 
-function showNameEntry(isHost, code){
+function showNameEntry(isHost,code){
   stopScanner();
-  var action = isHost ? 'submitHostName()' : "submitJoinName('"+code+"')";
-  var btnLabel = isHost ? '🚀 Create Lobby' : '✅ Join Game';
+  var action=isHost?'submitHostName()':"submitJoinName('"+code+"')";
   R(
     '<div class="screen" style="justify-content:center">'+
-    '<div class="panel">'+
+    '<div class="card" style="display:flex;flex-direction:column;gap:18px">'+
       '<button class="back-btn" onclick="showHome()">← Back</button>'+
-      '<h2 class="panel-title">'+(isHost?'Name Yourself':'Your Name')+'</h2>'+
-      '<p class="panel-sub">Game Code: <span class="code-badge">'+code+'</span></p>'+
-      '<input id="nameInput" class="input-field" type="text" placeholder="Enter your name…" maxlength="16" autocomplete="off"/>'+
-      '<button class="btn btn-primary" onclick="'+action+'">'+btnLabel+'</button>'+
+      '<div>'+
+        '<p class="card-title">'+(isHost?'Your Name':'Enter Name')+'</p>'+
+        '<p class="card-sub">Game code: <span class="code-chip">'+code+'</span></p>'+
+      '</div>'+
+      '<input id="nameInput" class="input-field" type="text" placeholder="Display name…" maxlength="16" autocomplete="off"/>'+
+      '<button class="btn btn-gold" onclick="'+action+'">'+(isHost?'Create Lobby':'Join Game')+'</button>'+
     '</div>'+
     '</div>'
   );
-  var ni = document.getElementById('nameInput');
-  ni.focus();
-  ni.addEventListener('keydown', function(e){
-    if(e.key==='Enter'){ isHost ? submitHostName() : submitJoinName(code); }
-  });
+  var ni=document.getElementById('nameInput');ni.focus();
+  ni.addEventListener('keydown',function(e){if(e.key==='Enter') isHost?submitHostName():submitJoinName(code);});
 }
 
 function submitHostName(){
-  var name = document.getElementById('nameInput').value.trim();
-  if(!name){ shake('nameInput'); return; }
-  G.playerName = name;
-  var code = G.gameCode, pid = G.playerId;
-  var gameObj = { host:pid, status:'lobby', createdAt:Date.now(), players:{} };
-  gameObj.players[pid] = { name:name, isHost:true };
-  db.ref('games/'+code).set(gameObj)
-    .then(function(){ listenGame(code); showLobby(); })
-    .catch(function(e){ toast('Firebase error: '+e.message); });
+  var name=document.getElementById('nameInput').value.trim();
+  if(!name){shake('nameInput');return;}
+  G.playerName=name;
+  var obj={host:G.playerId,status:'lobby',createdAt:Date.now(),round:1,failedRounds:[],players:{}};
+  obj.players[G.playerId]={name:name,isHost:true};
+  db.ref('games/'+G.gameCode).set(obj)
+    .then(function(){ listenGame(G.gameCode); showLobby(); })
+    .catch(function(e){ toast('Firebase: '+e.message); });
 }
 
-function joinByCode(codeOverride){
+function joinByCode(over){
   stopScanner();
-  var code = codeOverride || (document.getElementById('codeInput') && document.getElementById('codeInput').value.trim().toUpperCase());
-  if(!code || code.length < 4){ shake('codeInput'); return; }
+  var code=over||(document.getElementById('codeInput')&&document.getElementById('codeInput').value.trim().toUpperCase());
+  if(!code||code.length<4){shake('codeInput');return;}
   db.ref('games/'+code).once('value').then(function(snap){
-    if(!snap.exists()){ toast('Game not found. Check the code.'); return; }
-    var gd = snap.val();
-    if(gd.status !== 'lobby'){ toast('This game has already started.'); return; }
-    G.gameCode  = code;
-    G.playerId  = genId();
-    G.isHost    = false;
-    showNameEntry(false, code);
-  }).catch(function(e){ toast('Error: '+e.message); });
+    if(!snap.exists()){toast('Game not found.');return;}
+    var gd=snap.val();
+    if(gd.status!=='lobby'){toast('Game already in progress.');return;}
+    G.gameCode=code; G.playerId=genId(); G.isHost=false;
+    showNameEntry(false,code);
+  }).catch(function(e){toast('Error: '+e.message);});
 }
 
 function submitJoinName(code){
-  var name = document.getElementById('nameInput').value.trim();
-  if(!name){ shake('nameInput'); return; }
-  G.playerName = name;
-  db.ref('games/'+code+'/players/'+G.playerId).set({ name:name, isHost:false })
+  var name=document.getElementById('nameInput').value.trim();
+  if(!name){shake('nameInput');return;}
+  G.playerName=name;
+  db.ref('games/'+code+'/players/'+G.playerId).set({name:name,isHost:false})
     .then(function(){ listenGame(code); showLobby(); })
     .catch(function(e){ toast('Error: '+e.message); });
 }
 
-// ── LOBBY ─────────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   LOBBY
+══════════════════════════════════════════ */
 function showLobby(){
-  G.view = 'lobby';
-  var players  = G.players || {};
-  var pIds     = Object.keys(players);
-  var count    = pIds.length;
-  // No player limit — min 2 to start
-  var canStart = G.isHost && count >= 2;
-  var joinUrl  = location.origin + location.pathname + '?join=' + G.gameCode;
+  G.view='lobby';
+  var players=G.players||{},pIds=Object.keys(players),count=pIds.length;
+  var canStart=G.isHost&&count>=2;
+  var joinUrl=location.origin+location.pathname+'?join='+G.gameCode;
 
-  var chips = pIds.map(function(id){
-    var p = players[id];
-    return '<div class="player-chip'+(p.isHost?' host-chip':'')+'">'+
-      '<div class="player-avatar">'+p.name[0].toUpperCase()+'</div>'+
+  var chips=pIds.map(function(id){
+    var p=players[id];
+    return '<div class="p-chip'+(p.isHost?' is-host':'')+'">'+
+      '<div class="p-av">'+p.name[0].toUpperCase()+'</div>'+
       '<span>'+p.name+'</span>'+
-      (p.isHost ? '<span style="font-size:14px">👑</span>' : '')+
+      (p.isHost?'<span style="font-size:13px;margin-left:2px">👑</span>':'')+
     '</div>';
   }).join('');
 
-  var footer = G.isHost
-    ? '<button class="btn btn-primary"'+(canStart?'':' disabled')+' onclick="startGame()">⚡ Start Game</button>'+
-      '<p class="hint">Share code <strong style="color:var(--accent)">'+G.gameCode+'</strong> or scan the QR to invite friends<br>'+
-      '<span style="color:var(--accent2)">No player limit</span> · Minimum 2 to start</p>'
-    : '<p class="hint">Waiting for the host to start…</p>';
+  var footer=G.isHost
+    ?'<button class="btn btn-gold"'+(canStart?'':' disabled')+' onclick="startGame()">⚡&nbsp; Start Game</button>'+
+      '<p class="lobby-hint">Share code <span style="color:var(--gold2);letter-spacing:.15em">'+G.gameCode+'</span> or scan QR<br>No player limit · Min. 2 to start</p>'
+    :'<p class="lobby-hint">Waiting for host to start the game…</p>';
 
   R(
     '<div class="screen">'+
-    '<div class="lobby-header">'+
+    '<div class="lobby-top">'+
       '<div>'+
-        '<div class="lbl">Game Code</div>'+
-        '<div class="big-code">'+G.gameCode+'</div>'+
-        '<div class="player-count-badge" style="margin-top:6px">'+count+' player'+(count!==1?'s':'')+' joined</div>'+
+        '<p class="lobby-code-label">Game Code</p>'+
+        '<p class="lobby-code">'+G.gameCode+'</p>'+
+        '<p class="lobby-count">'+count+' player'+(count!==1?'s':'')+' in lobby</p>'+
       '</div>'+
-      '<div id="qrbox" class="qr-box"></div>'+
+      '<div id="qrbox" class="qr-wrap"></div>'+
     '</div>'+
-    '<div class="player-grid" id="playerList">'+chips+'</div>'+
+    '<div class="player-grid">'+chips+'</div>'+
     '<div class="lobby-footer">'+
-      '<p class="waiting-text">'+(count<2?'Need at least 2 players ('+count+'/2)':count+' players in lobby')+'</p>'+
+      '<p class="lobby-status">'+(count<2?'Need at least 2 players ('+count+'/2)':count+' players ready')+'</p>'+
       footer+
     '</div>'+
     '</div>'
   );
 
   setTimeout(function(){
-    var qrEl = document.getElementById('qrbox');
-    if(qrEl && typeof QRCode !== 'undefined'){
-      qrEl.innerHTML = '';
-      new QRCode(qrEl,{ text:joinUrl, width:96, height:96, colorDark:'#080810', colorLight:'#ffffff' });
+    var el=document.getElementById('qrbox');
+    if(el&&typeof QRCode!=='undefined'){
+      el.innerHTML='';
+      new QRCode(el,{text:joinUrl,width:88,height:88,colorDark:'#0d0d14',colorLight:'#ffffff'});
     }
-  }, 100);
+  },100);
 }
 
-// ── START GAME ────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   START GAME
+══════════════════════════════════════════ */
 function startGame(){
   if(!G.isHost) return;
-  var players = G.players;
-  var ids = Object.keys(players);
-  if(ids.length < 2) return;
-
-  var pair = rnd(WORDS);
-  var shuffled = shuffle(ids);
-  var impostorId = shuffled[0]; // always 1 impostor regardless of player count
-
-  var roles = {};
-  ids.forEach(function(id){
-    roles[id] = {
-      role: id===impostorId ? 'impostor' : 'real',
-      word: id===impostorId ? pair.imp : pair.real
-    };
-  });
-
+  var ids=Object.keys(G.players);
+  if(ids.length<2) return;
+  var pair=rnd(WORDS);
+  var imp=shuffle(ids)[0];
+  var roles={};
+  ids.forEach(function(id){ roles[id]={role:id===imp?'impostor':'real',word:id===imp?pair.imp:pair.real}; });
   db.ref('games/'+G.gameCode).update({
-    status:'role', roles:roles,
-    realWord:pair.real, impostorWord:pair.imp, votes:null, round:1
+    status:'role',roles:roles,
+    realWord:pair.real,impostorWord:pair.imp,
+    votes:null,round:1,failedRounds:[]
   });
 }
 
-// ── ROLE REVEAL ───────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   ROLE REVEAL
+══════════════════════════════════════════ */
 function showRole(){
-  G.view = 'role';
-  var myRole = G.gameData && G.gameData.roles && G.gameData.roles[G.playerId];
-  if(!myRole){ toast('Waiting for role assignment…'); return; }
-  G.role   = myRole.role;
-  G.myWord = myRole.word;
-  var isImp = G.role === 'impostor';
+  G.view='role';
+  var myRole=G.gameData&&G.gameData.roles&&G.gameData.roles[G.playerId];
+  if(!myRole) return;
+  G.role=myRole.role; G.myWord=myRole.word;
+  var isImp=G.role==='impostor';
+  var round=G.gameData.round||1;
+  var failed=G.gameData.failedRounds||[];
 
   R(
     '<div class="screen role-screen">'+
-    '<div class="role-card '+(isImp?'card-impostor':'card-crew')+'">'+
-      '<div class="role-eyeball">'+(isImp?'🔴':'🟢')+'</div>'+
-      '<div class="role-label">'+(isImp?'YOU ARE THE':'YOU ARE')+'</div>'+
-      '<div class="role-title">'+(isImp?'IMPOSTOR':'CREW')+'</div>'+
-      '<div class="role-divider"></div>'+
-      '<div class="role-word-label">Your Secret Word</div>'+
-      '<div class="role-word">'+myRole.word+'</div>'+
-      '<div class="role-hint">'+(isImp?'🕵️ Blend in. Don\'t get caught.':'🗣️ Give a clue. Find the impostor.')+'</div>'+
-      '<button class="btn btn-ghost" style="margin-top:8px" onclick="goToDiscuss()">I\'m Ready →</button>'+
+    '<div class="role-card '+(isImp?'rc-imp':'rc-crew')+'">'+
+      '<div class="role-orb">'+(isImp?'🔴':'🟢')+'</div>'+
+      '<p class="role-eyebrow">'+(round>1?'Round '+round+' — ':''+(isImp?'You are the':'You are'))+'</p>'+
+      '<p class="role-name">'+(isImp?'IMPOSTOR':'CREW')+'</p>'+
+      '<div class="role-sep"></div>'+
+      '<p class="role-wlabel">Your Secret Word</p>'+
+      '<p class="role-word">'+myRole.word+'</p>'+
+      '<p class="role-hint">'+(isImp?'🕵️ Your word is close but different. Blend in.':'🗣️ Give one clue. Find who doesn\'t belong.')+'</p>'+
+      (round>1?renderPips(round,failed):'<div style="height:4px"></div>')+
+      '<button class="btn btn-ghost" style="max-width:200px;margin-top:4px" onclick="goDiscuss()">I\'m Ready &rarr;</button>'+
     '</div>'+
     '</div>'
   );
 }
 
-function goToDiscuss(){
-  if(G.isHost){
-    db.ref('games/'+G.gameCode).update({ status:'discuss' });
-  } else {
-    showDiscuss();
-  }
+function goDiscuss(){
+  if(G.isHost) db.ref('games/'+G.gameCode).update({status:'discuss'});
+  else showDiscuss();
 }
 
-// ── DISCUSS ───────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   DISCUSS
+══════════════════════════════════════════ */
 function showDiscuss(){
-  G.view = 'discuss';
-  var players = G.players;
-  var rows = Object.keys(players).map(function(id){
-    var p = players[id], isMe = id===G.playerId;
-    return '<div class="player-row'+(isMe?' my-row':'')+'">'+
-      '<div class="avatar-sm">'+p.name[0].toUpperCase()+'</div>'+
-      '<span>'+p.name+(isMe?' <span style="color:var(--accent2);font-size:12px">(You)</span>':'')+'</span>'+
+  G.view='discuss';
+  var players=G.players, round=G.gameData&&G.gameData.round||1;
+  var failed=G.gameData&&G.gameData.failedRounds||[];
+
+  var rows=Object.keys(players).map(function(id){
+    var p=players[id],isMe=id===G.playerId;
+    return '<div class="prow'+(isMe?' prow-me':'')+'">'+
+      '<div class="av-sm">'+p.name[0].toUpperCase()+'</div>'+
+      '<span class="prow-name">'+p.name+'</span>'+
+      (isMe?'<span style="font-size:11px;color:var(--iris);font-family:var(--mono)">YOU</span>':'')+
     '</div>';
   }).join('');
 
   R(
     '<div class="screen">'+
-    '<div class="phase-badge">💬 DISCUSSION PHASE</div>'+
-    '<div style="text-align:center">'+
-      '<h2 style="font-size:28px;font-weight:800">Talk it out</h2>'+
-      '<p style="font-size:14px;color:var(--muted);margin-top:6px">Give ONE clue about your word. Don\'t say it directly!</p>'+
+    '<div class="phase-row">'+
+      '<div class="phase-pill">💬 Discussion · Round '+round+'</div>'+
+      renderPips(round,failed)+
     '</div>'+
-    '<div class="your-word-bar">'+
-      'Your word: <strong>'+G.myWord+'</strong>'+
-      '<span class="role-tag '+G.role+'">'+(G.role==='impostor'?'🔴 Impostor':'🟢 Crew')+'</span>'+
+    '<div class="word-bar">'+
+      '<span class="word-bar-label">YOUR WORD</span>'+
+      '<span class="word-bar-val">'+G.myWord+'</span>'+
+      '<span class="rtag '+(G.role==='impostor'?'rtag-imp':'rtag-crew')+'">'+(G.role==='impostor'?'IMPOSTOR':'CREW')+'</span>'+
     '</div>'+
     '<div style="width:100%">'+
-      '<p class="order-label">Players ('+Object.keys(players).length+')</p>'+
-      '<div class="player-list-vert">'+rows+'</div>'+
+      '<p class="sec-label">Players ('+Object.keys(players).length+')</p>'+
+      '<div class="plist">'+rows+'</div>'+
+    '</div>'+
+    '<div class="card card-sm" style="text-align:center;color:var(--fog);font-size:13px;line-height:1.7">'+
+      (round>1?'🔁 The crew got it wrong last round. Try again — give a new clue!':
+               'Give <strong style="color:var(--snow)">one clue</strong> describing your word without saying it directly.')+
     '</div>'+
     '<div style="width:100%;text-align:center">'+
       (G.isHost
-        ? '<button class="btn btn-primary" onclick="startVote()">🗳 Start Voting</button>'
-        : '<p class="hint">Waiting for host to open voting…</p>')+
+        ?'<button class="btn btn-gold" onclick="startVote()">🗳&nbsp; Open Voting</button>'
+        :'<p class="lobby-hint">Waiting for host to open voting…</p>')+
     '</div>'+
     '</div>'
   );
 }
 
-// ── VOTE ──────────────────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   VOTE
+══════════════════════════════════════════ */
 function startVote(){
   if(!G.isHost) return;
-  db.ref('games/'+G.gameCode).update({ status:'vote', votes:null });
+  db.ref('games/'+G.gameCode).update({status:'vote',votes:null});
 }
 
 function showVote(){
-  G.view = 'vote';
-  var players = G.players;
-  var votes   = (G.gameData && G.gameData.votes) || {};
-  var myVote  = votes[G.playerId];
-  var voteCount    = Object.keys(votes).length;
-  var totalPlayers = Object.keys(players).length;
+  G.view='vote';
+  var players=G.players;
+  var votes=(G.gameData&&G.gameData.votes)||{};
+  var myVote=votes[G.playerId];
+  var vc=Object.keys(votes).length, tot=Object.keys(players).length;
+  var round=G.gameData&&G.gameData.round||1;
+  var failed=G.gameData&&G.gameData.failedRounds||[];
 
-  var cards = Object.keys(players).map(function(id){
-    var p = players[id], isMe = id===G.playerId, votedFor = myVote===id;
-    var cnt = Object.values(votes).filter(function(v){ return v===id; }).length;
-    return '<div class="vote-card'+(votedFor?' voted':'')+(isMe?' vote-self':'')+'"'+
+  var cards=Object.keys(players).map(function(id){
+    var p=players[id],isMe=id===G.playerId,voted=myVote===id;
+    var cnt=Object.values(votes).filter(function(v){return v===id;}).length;
+    return '<div class="vc'+(voted?' vc-voted':'')+(isMe?' vc-self':'')+'"'+
       (!myVote&&!isMe?' onclick="castVote(\''+id+'\')"':'')+'>'+
-      '<div class="vote-avatar">'+p.name[0].toUpperCase()+'</div>'+
-      '<div class="vote-name">'+p.name+(isMe?'<br><span style="font-size:11px;color:var(--muted)">(You)</span>':'')+'</div>'+
-      '<div class="vote-count">'+(cnt>0?cnt+' vote'+(cnt>1?'s':''):'')+'</div>'+
-      (votedFor?'<div class="vote-check">✓</div>':'')+
+      '<div class="vc-av">'+p.name[0].toUpperCase()+'</div>'+
+      '<div class="vc-name">'+p.name+(isMe?'<br><span style="font-size:10px;color:var(--fog);font-family:var(--mono)">(you)</span>':'')+'</div>'+
+      '<div class="vc-cnt">'+(cnt>0?cnt+' vote'+(cnt>1?'s':''):'')+'</div>'+
+      (voted?'<div class="vc-check">✓</div>':'')+
     '</div>';
   }).join('');
 
   R(
     '<div class="screen">'+
-    '<div class="phase-badge">🗳 VOTING PHASE</div>'+
-    '<h2 class="vote-title">Who\'s the Impostor?</h2>'+
-    '<p class="vote-sub">'+voteCount+' / '+totalPlayers+' voted</p>'+
+    '<div class="phase-row">'+
+      '<div class="phase-pill">🗳 Voting · Round '+round+'/3</div>'+
+      renderPips(round,failed)+
+    '</div>'+
+    '<div style="text-align:center;width:100%">'+
+      '<p style="font-family:var(--serif);font-size:28px;font-weight:700;color:var(--snow)">Who\'s the Impostor?</p>'+
+      '<p style="font-size:12px;color:var(--fog);font-family:var(--mono);margin-top:4px;letter-spacing:.06em">'+vc+' / '+tot+' voted</p>'+
+    '</div>'+
     '<div class="vote-grid">'+cards+'</div>'+
     (myVote
-      ? '<p class="voted-msg">✅ Vote cast! Waiting for others…</p>'
-      : '<p class="hint" style="text-align:center">Tap a player to vote them out</p>')+
+      ?'<p class="vote-msg">✓ Vote cast — waiting for others…</p>'
+      :'<p style="font-size:13px;color:var(--fog);text-align:center;font-family:var(--mono);letter-spacing:.05em">Tap a player to vote them out</p>')+
     '</div>'
   );
 }
 
-function castVote(targetId){
+function castVote(tid){
   if(G.votedAlready) return;
-  G.votedAlready = true;
-  db.ref('games/'+G.gameCode+'/votes/'+G.playerId).set(targetId);
+  G.votedAlready=true;
+  db.ref('games/'+G.gameCode+'/votes/'+G.playerId).set(tid);
 }
 
+/* ══════════════════════════════════════════
+   VOTE RESULT CHECK  (3-round logic)
+══════════════════════════════════════════ */
 function checkVoteResult(){
   if(!G.isHost) return;
-  var players = G.players;
-  var votes   = (G.gameData && G.gameData.votes) || {};
+  var players=G.players, votes=(G.gameData&&G.gameData.votes)||{};
   if(Object.keys(votes).length < Object.keys(players).length) return;
 
-  var tally = {};
+  var tally={};
   Object.values(votes).forEach(function(v){ tally[v]=(tally[v]||0)+1; });
-  var maxVotes = Math.max.apply(null, Object.values(tally));
-  var topIds   = Object.keys(tally).filter(function(id){ return tally[id]===maxVotes; });
-  var eliminatedId = topIds[0];
-  var roles = (G.gameData && G.gameData.roles) || {};
-  var impostorId = Object.keys(roles).find(function(id){ return roles[id].role==='impostor'; });
-  var crewWon = eliminatedId === impostorId;
+  var max=Math.max.apply(null,Object.values(tally));
+  var top=Object.keys(tally).filter(function(id){ return tally[id]===max; });
+  var eliminatedId=top[0];
 
-  db.ref('games/'+G.gameCode).update({
-    status:'result', eliminatedId:eliminatedId, crewWon:crewWon, tally:tally
-  });
+  var roles=G.gameData.roles||{};
+  var impostorId=Object.keys(roles).find(function(id){ return roles[id].role==='impostor'; });
+  var crewWon=eliminatedId===impostorId;
+  var round=G.gameData.round||1;
+  var failedRounds=G.gameData.failedRounds?G.gameData.failedRounds.slice():[];
+
+  if(crewWon){
+    // Crew found the impostor
+    db.ref('games/'+G.gameCode).update({
+      status:'result', eliminatedId:eliminatedId,
+      crewWon:true, tally:tally, failedRounds:failedRounds
+    });
+  } else if(round>=3){
+    // 3 rounds used up — impostor wins
+    db.ref('games/'+G.gameCode).update({
+      status:'result', eliminatedId:eliminatedId,
+      crewWon:false, tally:tally, failedRounds:failedRounds
+    });
+  } else {
+    // Wrong person eliminated — next round
+    failedRounds.push(round);
+    db.ref('games/'+G.gameCode).update({
+      status:'round_failed',
+      failedElim:eliminatedId,
+      round:round+1,
+      failedRounds:failedRounds,
+      tally:tally,
+      votes:null
+    });
+  }
 }
 
-// ── RESULT ────────────────────────────────────────────────────────────────
-function showResult(){
-  G.view = 'result';
-  var gd = G.gameData;
-  var crewWon      = gd.crewWon;
-  var eliminatedId = gd.eliminatedId;
-  var elimName     = (G.players[eliminatedId]||{}).name||'Unknown';
-  var roles        = gd.roles||{};
-  var impostorId   = Object.keys(roles).find(function(id){ return roles[id].role==='impostor'; });
-  var impostorName = (G.players[impostorId]||{}).name||'Unknown';
+/* ══════════════════════════════════════════
+   ROUND FAILED SCREEN
+══════════════════════════════════════════ */
+function showRoundFailed(){
+  G.view='round_failed';
+  var gd=G.gameData;
+  var failedName=(G.players[gd.failedElim]||{}).name||'Someone';
+  var round=gd.round||2;  // this is already the NEXT round number
+  var triesLeft=3-(round-1); // rounds remaining
+  var failed=gd.failedRounds||[];
 
-  var tallyRows = Object.keys(gd.tally||{})
+  R(
+    '<div class="screen" style="justify-content:center">'+
+    '<div class="round-failed-card">'+
+      '<div class="rf-icon">🚫</div>'+
+      renderPips(round-1,failed)+  // show pips at the round that just ended
+      '<p class="rf-title">Wrong Suspect!</p>'+
+      '<p class="rf-sub"><strong style="color:var(--snow)">'+failedName+'</strong> was not the Impostor.<br>The game continues…</p>'+
+      '<div class="rf-tries">'+triesLeft+' round'+(triesLeft!==1?'s':'')+' remaining</div>'+
+      (G.isHost
+        ?'<button class="btn btn-gold" style="margin-top:8px" onclick="nextRound()">Continue →</button>'
+        :'<p class="lobby-hint">Waiting for host to continue…</p>')+
+    '</div>'+
+    '</div>'
+  );
+}
+
+function nextRound(){
+  if(!G.isHost) return;
+  db.ref('games/'+G.gameCode).update({status:'discuss'});
+}
+
+/* ══════════════════════════════════════════
+   RESULT
+══════════════════════════════════════════ */
+function showResult(){
+  G.view='result';
+  var gd=G.gameData;
+  var crewWon=gd.crewWon;
+  var elimName=(G.players[gd.eliminatedId]||{}).name||'Unknown';
+  var roles=gd.roles||{};
+  var impId=Object.keys(roles).find(function(id){ return roles[id].role==='impostor'; });
+  var impName=(G.players[impId]||{}).name||'Unknown';
+  var rounds=gd.round||1;
+  var failed=gd.failedRounds||[];
+
+  var tallyRows=Object.keys(gd.tally||{})
     .sort(function(a,b){ return gd.tally[b]-gd.tally[a]; })
     .map(function(id){
-      var cnt = gd.tally[id];
-      var w = Math.min(cnt*44, 180);
-      return '<div class="tally-row">'+
-        '<span class="tally-name">'+((G.players[id]||{}).name||id)+'</span>'+
-        '<div class="tally-bar"><div class="tally-fill" style="width:'+w+'px">'+cnt+'</div></div>'+
+      var cnt=gd.tally[id], w=Math.min(cnt*48,180);
+      return '<div class="t-row">'+
+        '<span class="t-name">'+((G.players[id]||{}).name||id)+'</span>'+
+        '<div class="t-track"><div class="t-fill" style="width:'+w+'px">'+cnt+'</div></div>'+
       '</div>';
     }).join('');
 
   R(
     '<div class="screen result-screen">'+
-    '<div class="result-card '+(crewWon?'crew-win':'imp-win')+'">'+
+    '<div class="result-card '+(crewWon?'result-crew':'result-imp')+'">'+
       '<div class="result-icon">'+(crewWon?'🎉':'😈')+'</div>'+
-      '<div class="result-winner">'+(crewWon?'CREW WINS!':'IMPOSTOR WINS!')+'</div>'+
-      '<p class="result-detail">'+
+      renderPips(rounds,failed)+
+      '<p class="result-headline">'+(crewWon?'CREW WINS':'IMPOSTOR WINS')+'</p>'+
+      '<p class="result-copy">'+
         (crewWon
-          ? '<strong>'+elimName+'</strong> was voted out — they were the Impostor!'
-          : '<strong>'+elimName+'</strong> was eliminated — the Impostor escaped!')+
+          ? '<strong style="color:var(--snow)">'+elimName+'</strong> was correctly voted out — they were the Impostor!'
+          : (rounds>=3
+              ? 'All 3 rounds exhausted. The Impostor, <strong style="color:var(--snow)">'+impName+'</strong>, escaped!'
+              : '<strong style="color:var(--snow)">'+impName+'</strong> slipped away undetected.'))+
       '</p>'+
-      '<div class="reveal-block">'+
-        '<div class="reveal-row"><span class="reveal-label">🟢 Crew\'s Word</span><span class="reveal-val">'+gd.realWord+'</span></div>'+
-        '<div class="reveal-row"><span class="reveal-label">🔴 Impostor\'s Word</span><span class="reveal-val">'+gd.impostorWord+'</span></div>'+
-        '<div class="reveal-row"><span class="reveal-label">🕵️ Impostor Was</span><span class="reveal-val">'+impostorName+'</span></div>'+
+      '<div class="reveal-box">'+
+        '<div class="rev-row"><span class="rev-lbl">🟢 Crew Word</span><span class="rev-val">'+gd.realWord+'</span></div>'+
+        '<div class="rev-row"><span class="rev-lbl">🔴 Impostor Word</span><span class="rev-val">'+gd.impostorWord+'</span></div>'+
+        '<div class="rev-row"><span class="rev-lbl">🕵️ Impostor</span><span class="rev-val">'+impName+'</span></div>'+
+        '<div class="rev-row"><span class="rev-lbl">⚔️ Rounds Played</span><span class="rev-val">'+rounds+'</span></div>'+
       '</div>'+
-      '<div style="width:100%"><p class="tally-label">Final Votes</p>'+tallyRows+'</div>'+
+      '<div class="tally-section">'+
+        '<p class="tally-title">Final Vote Tally</p>'+
+        tallyRows+
+      '</div>'+
       (G.isHost
-        ? '<button class="btn btn-primary" onclick="playAgain()">🔁 Play Again</button>'
-        : '<p class="hint">Waiting for host to restart…</p>')+
+        ?'<button class="btn btn-gold" onclick="playAgain()" style="margin-top:4px">🔁&nbsp; Play Again</button>'
+        :'<p class="lobby-hint">Waiting for host to restart…</p>')+
     '</div>'+
     '</div>'
   );
@@ -687,63 +1019,60 @@ function showResult(){
 
 function playAgain(){
   if(!G.isHost) return;
-  G.votedAlready = false;
-  var resetPlayers = {};
+  G.votedAlready=false;
+  var rp={};
   Object.keys(G.players).forEach(function(id){
-    var p = G.players[id];
-    resetPlayers[id] = { name:p.name, isHost:!!p.isHost };
+    var p=G.players[id]; rp[id]={name:p.name,isHost:!!p.isHost};
   });
   db.ref('games/'+G.gameCode).set({
-    host:G.playerId, status:'lobby', createdAt:Date.now(), players:resetPlayers
+    host:G.playerId,status:'lobby',createdAt:Date.now(),
+    round:1,failedRounds:[],players:rp
   });
 }
 
-// ── REALTIME LISTENER ─────────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   REALTIME LISTENER
+══════════════════════════════════════════ */
 function listenGame(code){
   if(G.dbOff){ G.dbOff(); G.dbOff=null; }
-  var gameRef = db.ref('games/'+code);
-  var handler = gameRef.on('value', function(snap){
+  var ref=db.ref('games/'+code);
+  var h=ref.on('value',function(snap){
     if(!snap.exists()) return;
-    var gd = snap.val();
-    G.gameData = gd;
-    G.players  = gd.players || {};
+    var gd=snap.val();
+    G.gameData=gd; G.players=gd.players||{};
 
     switch(gd.status){
       case 'lobby':
-        G.votedAlready = false;
-        showLobby();
-        break;
+        G.votedAlready=false;
+        showLobby(); break;
       case 'role':
-        if(G.view!=='role') showRole();
-        break;
+        if(G.view!=='role') showRole(); break;
       case 'discuss':
-        if(G.view!=='discuss') showDiscuss();
-        break;
+        if(G.view!=='discuss') showDiscuss(); break;
       case 'vote':
         showVote();
-        checkVoteResult();
-        break;
+        checkVoteResult(); break;
+      case 'round_failed':
+        if(G.view!=='round_failed') showRoundFailed(); break;
       case 'result':
-        if(G.view!=='result') showResult();
-        break;
+        if(G.view!=='result') showResult(); break;
     }
   });
-  G.dbOff = function(){ gameRef.off('value', handler); };
+  G.dbOff=function(){ ref.off('value',h); };
 }
 
-// ── URL PARAM AUTO-JOIN ───────────────────────────────────────────────────
+/* ══════════════════════════════════════════
+   URL PARAM AUTO-JOIN
+══════════════════════════════════════════ */
 function checkUrlParams(){
-  var params = new URLSearchParams(location.search);
-  var joinCode = params.get('join');
-  if(joinCode){
-    history.replaceState({}, '', location.pathname);
-    G.playerId = genId();
-    G.isHost   = false;
-    joinByCode(joinCode.toUpperCase());
+  var p=new URLSearchParams(location.search), c=p.get('join');
+  if(c){
+    history.replaceState({},'',location.pathname);
+    G.playerId=genId(); G.isHost=false;
+    joinByCode(c.toUpperCase());
   }
 }
 
-// ── BOOT ─────────────────────────────────────────────────────────────────
 checkUrlParams();
 showHome();
 </script>
