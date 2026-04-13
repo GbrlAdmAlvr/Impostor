@@ -5,1021 +5,747 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IMPOSTOR — Social Deduction Game</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<!-- QR Scanner -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080810;--surface:#111120;--surface2:#1a1a30;
+  --border:#2a2a45;--text:#e8e8f0;--muted:#7070a0;
+  --accent:#ff4d6d;--accent2:#7b61ff;--green:#22d68a;--yellow:#f5c542;
+  --r:16px;--fh:'Syne',sans-serif;--fm:'Space Mono',monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:var(--fh);-webkit-font-smoothing:antialiased}
+#app{min-height:100vh;display:flex;align-items:flex-start;justify-content:center}
+.screen{width:100%;max-width:520px;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 60px;gap:20px}
 
-<!-- Firebase -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, set, get, push, onValue, update, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+/* HOME */
+.home-screen{justify-content:center;position:relative;overflow:hidden}
+.home-bg{position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(123,97,255,.18) 0%,transparent 70%),
+             radial-gradient(ellipse 60% 40% at 80% 80%,rgba(255,77,109,.12) 0%,transparent 60%)}
+.home-content{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:40px;max-width:400px;width:100%}
+.logo-block{display:flex;flex-direction:column;align-items:center;gap:10px}
+.eye-icon{font-size:64px;animation:pulse-eye 2s ease-in-out infinite;filter:drop-shadow(0 0 24px rgba(255,77,109,.6))}
+@keyframes pulse-eye{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.logo-text{font-size:clamp(52px,14vw,80px);font-weight:800;letter-spacing:.12em;line-height:1;
+  background:linear-gradient(135deg,#ff4d6d,#7b61ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.tagline{font-family:var(--fm);font-size:11px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.home-actions{display:flex;flex-direction:column;gap:12px;width:100%}
+.home-footer{color:var(--muted);font-size:13px;font-family:var(--fm)}
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAtVf0fOSQhqNajmYrFGyZWBUX07gL3hRg",
-  authDomain: "impostor-7bba3.firebaseapp.com",
-  projectId: "impostor-7bba3",
-  storageBucket: "impostor-7bba3.firebasestorage.app",
-  messagingSenderId: "695750026559",
-  appId: "1:695750026559:web:dd139c9b5292c91d859f8a",
-  databaseURL: "https://impostor-7bba3-default-rtdb.firebaseio.com"
-};
+/* BUTTONS */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px 24px;border:none;
+  border-radius:var(--r);font-family:var(--fh);font-size:16px;font-weight:700;letter-spacing:.05em;
+  cursor:pointer;transition:transform .15s,box-shadow .15s}
+.btn:hover:not(:disabled){transform:translateY(-2px)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,#ff4d6d,#c0392b);color:#fff;box-shadow:0 8px 30px rgba(255,77,109,.35)}
+.btn-primary:hover:not(:disabled){box-shadow:0 12px 40px rgba(255,77,109,.55)}
+.btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover:not(:disabled){border-color:var(--accent2)}
+.btn-ghost{background:transparent;color:var(--accent2);border:2px solid var(--accent2);max-width:220px}
+.btn-outline-red{background:transparent;color:var(--accent);border:2px solid var(--accent)}
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+/* PANEL */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:36px 28px;
+  width:100%;display:flex;flex-direction:column;gap:18px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.panel-title{font-size:28px;font-weight:800}
+.panel-sub{font-size:14px;color:var(--muted)}
+.code-badge{font-family:var(--fm);letter-spacing:.2em;background:var(--surface2);border:1px solid var(--border);
+  padding:2px 10px;border-radius:8px;font-size:16px;color:var(--accent)}
+.input-field{width:100%;padding:14px 18px;background:var(--surface2);border:2px solid var(--border);
+  border-radius:var(--r);color:var(--text);font-family:var(--fh);font-size:16px;outline:none;transition:border-color .2s}
+.input-field:focus{border-color:var(--accent2)}
+.input-field::placeholder{color:var(--muted)}
+.back-btn{background:none;border:none;color:var(--muted);font-family:var(--fh);font-size:14px;
+  cursor:pointer;align-self:flex-start;transition:color .15s}
+.back-btn:hover{color:var(--text)}
 
-// ─── WORD BANK ──────────────────────────────────────────────────────────────
-const WORD_BANK = [
-  { real: "Piano",        impostor: "Keyboard" },
-  { real: "Shark",        impostor: "Dolphin" },
-  { real: "Pizza",        impostor: "Flatbread" },
-  { real: "Astronaut",    impostor: "Cosmonaut" },
-  { real: "Castle",       impostor: "Fortress" },
-  { real: "Volcano",      impostor: "Mountain" },
-  { real: "Submarine",    impostor: "Boat" },
-  { real: "Diamond",      impostor: "Crystal" },
-  { real: "Tiger",        impostor: "Leopard" },
-  { real: "Helicopter",   impostor: "Drone" },
-  { real: "Chocolate",    impostor: "Caramel" },
-  { real: "Library",      impostor: "Bookstore" },
-  { real: "Sword",        impostor: "Dagger" },
-  { real: "Thunderstorm", impostor: "Rain" },
-  { real: "Motorcycle",   impostor: "Bicycle" },
-  { real: "Vampire",      impostor: "Zombie" },
-  { real: "Campfire",     impostor: "Bonfire" },
-  { real: "Prison",       impostor: "Jail" },
-  { real: "Telescope",    impostor: "Binoculars" },
-  { real: "Tornado",      impostor: "Hurricane" },
+/* DIVIDER */
+.or-divider{display:flex;align-items:center;gap:12px;width:100%;color:var(--muted);font-size:12px;font-family:var(--fm)}
+.or-divider::before,.or-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* QR SCANNER */
+.scanner-wrap{width:100%;border-radius:16px;overflow:hidden;border:2px solid var(--border);background:#000;position:relative}
+.scanner-wrap video{width:100%!important;height:auto!important}
+#qr-reader{width:100%!important}
+#qr-reader video{border-radius:14px}
+#qr-reader img{display:none!important}
+#qr-reader__dashboard_section_csr button{
+  background:var(--accent2)!important;color:#fff!important;border:none!important;
+  padding:10px 20px!important;border-radius:8px!important;font-family:var(--fh)!important;
+  font-size:14px!important;cursor:pointer!important;margin-top:8px!important}
+#qr-reader__status_span{color:var(--muted)!important;font-size:12px!important;font-family:var(--fm)!important}
+#qr-reader__dashboard_section_swaplink{color:var(--accent2)!important;font-size:13px!important}
+.scan-status{font-size:13px;color:var(--muted);font-family:var(--fm);text-align:center}
+.scan-success{color:var(--green)!important}
+
+/* LOBBY */
+.lobby-header{width:100%;display:flex;justify-content:space-between;align-items:center;
+  background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px 24px;gap:16px}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:6px}
+.big-code{font-family:var(--fm);font-size:clamp(28px,8vw,44px);font-weight:700;letter-spacing:.25em;color:var(--accent)}
+.qr-box{background:#fff;border-radius:12px;padding:8px;flex-shrink:0}
+.player-count-badge{font-family:var(--fm);font-size:12px;color:var(--muted);
+  background:var(--surface2);border:1px solid var(--border);padding:4px 12px;border-radius:20px}
+.player-grid{width:100%;display:flex;flex-wrap:wrap;gap:10px}
+.player-chip{display:flex;align-items:center;gap:10px;background:var(--surface);
+  border:1px solid var(--border);border-radius:50px;padding:10px 16px;animation:pop-in .3s ease}
+@keyframes pop-in{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.host-chip{border-color:var(--yellow)}
+.player-avatar{width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0}
+.lobby-footer{width:100%;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.waiting-text{font-size:15px;color:var(--muted)}
+.hint{font-size:13px;color:var(--muted);font-family:var(--fm);line-height:1.7}
+
+/* ROLE */
+.role-screen{justify-content:center}
+.role-card{width:100%;border-radius:28px;padding:44px 28px;display:flex;flex-direction:column;
+  align-items:center;text-align:center;gap:16px;border:1px solid var(--border);
+  animation:card-reveal .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes card-reveal{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.card-impostor{background:linear-gradient(160deg,#1a0810,#2d0818);border-color:rgba(255,77,109,.3)}
+.card-crew{background:linear-gradient(160deg,#081a12,#0d2d1a);border-color:rgba(34,214,138,.3)}
+.role-eyeball{font-size:56px;animation:pulse-eye 1.5s ease-in-out infinite}
+.role-label{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.role-title{font-size:52px;font-weight:800;letter-spacing:.1em;line-height:1}
+.card-impostor .role-title{color:var(--accent)}
+.card-crew .role-title{color:var(--green)}
+.role-divider{width:60px;height:2px;background:var(--border)}
+.role-word-label{font-size:12px;text-transform:uppercase;letter-spacing:.2em;color:var(--muted)}
+.role-word{font-size:36px;font-weight:800;
+  background:linear-gradient(135deg,var(--text),var(--muted));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.role-hint{font-size:14px;color:var(--muted);font-family:var(--fm)}
+
+/* PHASE BADGE */
+.phase-badge{font-family:var(--fm);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  background:var(--surface2);border:1px solid var(--border);padding:6px 16px;border-radius:20px;color:var(--muted)}
+
+/* DISCUSS */
+.your-word-bar{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:14px 20px;display:flex;align-items:center;justify-content:space-between;font-size:15px;gap:12px;flex-wrap:wrap}
+.role-tag{font-size:12px;padding:4px 12px;border-radius:20px;font-family:var(--fm);flex-shrink:0}
+.role-tag.real{background:rgba(34,214,138,.15);color:var(--green)}
+.role-tag.impostor{background:rgba(255,77,109,.15);color:var(--accent)}
+.player-list-vert{display:flex;flex-direction:column;gap:8px;width:100%}
+.player-row{display:flex;align-items:center;gap:12px;background:var(--surface);
+  border:1px solid var(--border);border-radius:12px;padding:12px 16px}
+.my-row{border-color:var(--accent2);background:rgba(123,97,255,.08)}
+.avatar-sm{width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+.order-label{font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:10px}
+
+/* VOTE */
+.vote-title{font-size:32px;font-weight:800}
+.vote-sub{font-size:14px;color:var(--muted);font-family:var(--fm)}
+.vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%}
+.vote-card{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:20px 12px;
+  cursor:pointer;transition:all .2s;position:relative;display:flex;flex-direction:column;
+  align-items:center;gap:8px;text-align:center}
+.vote-card:not(.vote-self):hover{border-color:var(--accent);transform:translateY(-2px)}
+.vote-card.voted{border-color:var(--accent);background:rgba(255,77,109,.1)}
+.vote-card.vote-self{opacity:.4;cursor:default}
+.vote-avatar{width:50px;height:50px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent2),var(--accent));
+  display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
+.vote-name{font-size:14px;font-weight:700}
+.vote-count{font-size:12px;color:var(--accent);font-family:var(--fm);min-height:16px}
+.vote-check{position:absolute;top:8px;right:10px;color:var(--accent);font-size:18px;font-weight:800}
+.voted-msg{color:var(--green);font-size:15px;text-align:center}
+
+/* RESULT */
+.result-screen{justify-content:center}
+.result-card{width:100%;border-radius:28px;padding:36px 24px;display:flex;flex-direction:column;
+  align-items:center;text-align:center;gap:18px;border:1px solid var(--border);animation:card-reveal .5s ease}
+.crew-win{background:linear-gradient(160deg,#081a12,#0d2a18);border-color:rgba(34,214,138,.3)}
+.imp-win{background:linear-gradient(160deg,#1a0810,#280d18);border-color:rgba(255,77,109,.3)}
+.result-icon{font-size:60px;animation:pulse-eye 1.5s ease-in-out infinite}
+.result-winner{font-size:36px;font-weight:800;letter-spacing:.08em}
+.crew-win .result-winner{color:var(--green)}
+.imp-win .result-winner{color:var(--accent)}
+.result-detail{font-size:15px;color:var(--muted);line-height:1.6}
+.reveal-block{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.reveal-row{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.reveal-label{color:var(--muted);font-size:13px}
+.reveal-val{font-weight:700}
+.tally-label{font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:10px;text-align:left}
+.tally-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:14px}
+.tally-name{min-width:80px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px}
+.tally-bar{flex:1;background:var(--surface2);border-radius:6px;overflow:hidden;height:24px}
+.tally-fill{height:100%;min-width:28px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:12px;font-weight:700;transition:width .8s ease}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--surface2);border:1px solid var(--border);padding:12px 24px;border-radius:12px;
+  font-size:14px;color:var(--accent);font-family:var(--fm);box-shadow:0 8px 30px rgba(0,0,0,.5);
+  animation:toast-in .3s ease;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
+@keyframes toast-in{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.shake{animation:shake .4s ease;border-color:var(--accent)!important}
+
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── FIREBASE ───────────────────────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey:"AIzaSyAtVf0fOSQhqNajmYrFGyZWBUX07gL3hRg",
+  authDomain:"impostor-7bba3.firebaseapp.com",
+  projectId:"impostor-7bba3",
+  storageBucket:"impostor-7bba3.firebasestorage.app",
+  messagingSenderId:"695750026559",
+  appId:"1:695750026559:web:dd139c9b5292c91d859f8a",
+  databaseURL:"https://impostor-7bba3-default-rtdb.firebaseio.com"
+});
+var db = firebase.database();
+
+// ── WORD BANK ──────────────────────────────────────────────────────────────
+var WORDS = [
+  {real:"Piano",imp:"Keyboard"},{real:"Shark",imp:"Dolphin"},
+  {real:"Pizza",imp:"Flatbread"},{real:"Astronaut",imp:"Cosmonaut"},
+  {real:"Castle",imp:"Fortress"},{real:"Volcano",imp:"Mountain"},
+  {real:"Submarine",imp:"Boat"},{real:"Diamond",imp:"Crystal"},
+  {real:"Tiger",imp:"Leopard"},{real:"Helicopter",imp:"Drone"},
+  {real:"Chocolate",imp:"Caramel"},{real:"Library",imp:"Bookstore"},
+  {real:"Sword",imp:"Dagger"},{real:"Thunderstorm",imp:"Rain"},
+  {real:"Motorcycle",imp:"Bicycle"},{real:"Vampire",imp:"Zombie"},
+  {real:"Campfire",imp:"Bonfire"},{real:"Prison",imp:"Jail"},
+  {real:"Telescope",imp:"Binoculars"},{real:"Tornado",imp:"Hurricane"},
+  {real:"Guitar",imp:"Ukulele"},{real:"Crown",imp:"Tiara"},
+  {real:"Cannon",imp:"Catapult"},{real:"Igloo",imp:"Tent"},
+  {real:"Compass",imp:"Map"},{real:"Lantern",imp:"Flashlight"},
+  {real:"Jungle",imp:"Forest"},{real:"Pirate",imp:"Viking"},
+  {real:"Rocket",imp:"Missile"},{real:"Mirror",imp:"Window"},
+  {real:"Cactus",imp:"Palm Tree"},{real:"Snowflake",imp:"Raindrop"},
+  {real:"Lighthouse",imp:"Watchtower"},{real:"Wizard",imp:"Witch"},
+  {real:"Trampoline",imp:"Mattress"},{real:"Walrus",imp:"Seal"}
 ];
 
-// ─── STATE ──────────────────────────────────────────────────────────────────
-let state = {
-  view: 'home',      // home | host | join | lobby | role | discuss | vote | result
-  gameCode: null,
-  playerId: null,
-  playerName: null,
-  isHost: false,
-  role: null,        // 'real' | 'impostor'
-  myWord: null,
-  players: {},
-  gameData: null,
-  voteTarget: null,
-  votedAlready: false,
-  unsubscribe: null,
+// ── STATE ──────────────────────────────────────────────────────────────────
+var G = {
+  view:'home', gameCode:null, playerId:null, playerName:null,
+  isHost:false, role:null, myWord:null, players:{},
+  gameData:null, votedAlready:false, dbOff:null, qrScanner:null
 };
 
-// ─── UTILS ──────────────────────────────────────────────────────────────────
-function genCode() {
-  return Math.random().toString(36).substring(2, 7).toUpperCase();
-}
-function genId() {
-  return Math.random().toString(36).substring(2, 11);
-}
-function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
+// ── UTILS ──────────────────────────────────────────────────────────────────
+function genCode(){ return Math.random().toString(36).substring(2,7).toUpperCase(); }
+function genId(){ return Math.random().toString(36).substring(2,13); }
+function rnd(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(arr){
+  var a=arr.slice();
+  for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}
   return a;
 }
-function saveLocal() {
-  localStorage.setItem('impostorState', JSON.stringify({
-    gameCode: state.gameCode,
-    playerId: state.playerId,
-    playerName: state.playerName,
-    isHost: state.isHost,
-  }));
+function toast(msg){
+  var o=document.querySelector('.toast'); if(o)o.remove();
+  var el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  document.body.appendChild(el); setTimeout(function(){if(el.parentNode)el.remove();},3000);
 }
-function loadLocal() {
-  try {
-    const d = JSON.parse(localStorage.getItem('impostorState') || '{}');
-    return d;
-  } catch { return {}; }
+function shake(id){
+  var el=document.getElementById(id); if(!el)return;
+  el.classList.remove('shake'); void el.offsetWidth;
+  el.classList.add('shake'); setTimeout(function(){el.classList.remove('shake');},500);
 }
+var root=document.getElementById('app');
+function R(html){ root.innerHTML=html; }
 
-// ─── RENDER ENGINE ──────────────────────────────────────────────────────────
-const root = document.getElementById('app');
-function render(html) { root.innerHTML = html; }
-
-// ─── SCREENS ────────────────────────────────────────────────────────────────
-
-function showHome() {
-  state.view = 'home';
-  render(`
-    <div class="screen home-screen">
-      <div class="home-bg"></div>
-      <div class="home-content">
-        <div class="logo-block">
-          <div class="eye-icon">👁</div>
-          <h1 class="logo-text">IMPOSTOR</h1>
-          <p class="tagline">Social Deduction · Real Time · No Mercy</p>
-        </div>
-        <div class="home-actions">
-          <button class="btn btn-primary" onclick="hostGame()">
-            <span class="btn-icon">⚡</span> Host a Game
-          </button>
-          <button class="btn btn-secondary" onclick="showJoinManual()">
-            <span class="btn-icon">🔑</span> Enter Game Code
-          </button>
-        </div>
-        <div class="home-footer">
-          <p>Scan the host's QR code to join instantly</p>
-        </div>
-      </div>
-    </div>
-  `);
-}
-
-async function hostGame() {
-  const code = genCode();
-  const pid = genId();
-  state.gameCode = code;
-  state.playerId = pid;
-  state.isHost = true;
-  saveLocal();
-
-  showNameEntry(true, code);
-}
-
-function showNameEntry(isHost, code) {
-  render(`
-    <div class="screen name-screen">
-      <div class="panel">
-        <button class="back-btn" onclick="showHome()">← Back</button>
-        <h2 class="panel-title">${isHost ? 'Name Yourself' : 'What\'s Your Name?'}</h2>
-        <p class="panel-sub">Game Code: <span class="code-badge">${code}</span></p>
-        <input id="nameInput" class="input-field" type="text" placeholder="Enter your name..." maxlength="16" autofocus />
-        <button class="btn btn-primary" onclick="${isHost ? 'submitHostName()' : 'submitJoinName(\'' + code + '\')'}">
-          ${isHost ? '🚀 Create Lobby' : '✅ Join Game'}
-        </button>
-      </div>
-    </div>
-  `);
-  document.getElementById('nameInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') isHost ? submitHostName() : submitJoinName(code);
-  });
-}
-
-async function submitHostName() {
-  const name = document.getElementById('nameInput').value.trim();
-  if (!name) return shake('nameInput');
-  state.playerName = name;
-
-  const code = state.gameCode;
-  const pid = state.playerId;
-  await set(ref(db, `games/${code}`), {
-    host: pid,
-    status: 'lobby',
-    createdAt: Date.now(),
-    players: {
-      [pid]: { name, isHost: true, ready: false }
-    }
-  });
-
-  listenGame(code);
-  showLobby();
-}
-
-function showJoinManual() {
-  render(`
-    <div class="screen name-screen">
-      <div class="panel">
-        <button class="back-btn" onclick="showHome()">← Back</button>
-        <h2 class="panel-title">Enter Game Code</h2>
-        <input id="codeInput" class="input-field" type="text" placeholder="e.g. ABC12" maxlength="5" autofocus style="text-transform:uppercase;letter-spacing:0.2em;" />
-        <button class="btn btn-primary" onclick="joinByCode()">Join →</button>
-      </div>
-    </div>
-  `);
-}
-
-async function joinByCode(codeOverride) {
-  const code = codeOverride || document.getElementById('codeInput')?.value.trim().toUpperCase();
-  if (!code || code.length < 4) return shake('codeInput');
-
-  // Check game exists
-  const snap = await get(ref(db, `games/${code}`));
-  if (!snap.exists()) {
-    showError('Game not found. Check the code and try again.'); return;
+function stopScanner(){
+  if(G.qrScanner){
+    try{ G.qrScanner.stop().catch(function(){}); } catch(e){}
+    G.qrScanner=null;
   }
-  const gData = snap.val();
-  if (gData.status !== 'lobby') {
-    showError('This game has already started.'); return;
-  }
-
-  state.gameCode = code;
-  state.playerId = genId();
-  state.isHost = false;
-  saveLocal();
-  showNameEntry(false, code);
 }
 
-async function submitJoinName(code) {
-  const name = document.getElementById('nameInput').value.trim();
-  if (!name) return shake('nameInput');
-  state.playerName = name;
-  const pid = state.playerId;
-
-  await set(ref(db, `games/${code}/players/${pid}`), {
-    name, isHost: false, ready: false
-  });
-
-  listenGame(code);
-  showLobby();
+// ── HOME ──────────────────────────────────────────────────────────────────
+function showHome(){
+  stopScanner();
+  G.view='home';
+  if(G.dbOff){ G.dbOff(); G.dbOff=null; }
+  R(
+    '<div class="screen home-screen">'+
+    '<div class="home-bg"></div>'+
+    '<div class="home-content">'+
+      '<div class="logo-block">'+
+        '<div class="eye-icon">👁</div>'+
+        '<h1 class="logo-text">IMPOSTOR</h1>'+
+        '<p class="tagline">Social Deduction · Real Time · No Mercy</p>'+
+      '</div>'+
+      '<div class="home-actions">'+
+        '<button class="btn btn-primary" onclick="hostGame()">⚡ Host a Game</button>'+
+        '<button class="btn btn-secondary" onclick="showJoin()">🔍 Join a Game</button>'+
+      '</div>'+
+      '<div class="home-footer"><p>Scan a QR code or enter a game code to join</p></div>'+
+    '</div>'+
+    '</div>'
+  );
 }
 
-function showLobby() {
-  state.view = 'lobby';
-  const players = Object.values(state.players || {});
-  const joinUrl = `${location.origin}${location.pathname}?join=${state.gameCode}`;
+// ── JOIN SCREEN (QR scanner + manual code) ────────────────────────────────
+function showJoin(){
+  stopScanner();
+  R(
+    '<div class="screen" style="justify-content:flex-start;padding-top:40px">'+
+    '<div class="panel" style="gap:20px">'+
+      '<button class="back-btn" onclick="showHome()">← Back</button>'+
+      '<h2 class="panel-title">Join a Game</h2>'+
 
-  render(`
-    <div class="screen lobby-screen">
-      <div class="lobby-header">
-        <div>
-          <p class="label">Game Code</p>
-          <div class="big-code">${state.gameCode}</div>
-        </div>
-        <div id="qrbox" class="qr-box"></div>
-      </div>
+      '<div style="width:100%">'+
+        '<p style="font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);margin-bottom:10px;font-family:var(--fm)">📷 Scan QR Code</p>'+
+        '<div class="scanner-wrap"><div id="qr-reader"></div></div>'+
+        '<p class="scan-status" id="scanStatus">Point your camera at the host\'s QR code</p>'+
+      '</div>'+
 
-      <div class="player-grid" id="playerList">
-        ${players.map(p => `
-          <div class="player-chip ${p.isHost ? 'host-chip' : ''}">
-            <span class="player-avatar">${p.name[0].toUpperCase()}</span>
-            <span>${p.name}</span>
-            ${p.isHost ? '<span class="crown">👑</span>' : ''}
-          </div>
-        `).join('')}
-      </div>
+      '<div class="or-divider">or enter code manually</div>'+
 
-      <div class="lobby-footer">
-        <p class="waiting-text">${players.length < 3 ? `Need at least 3 players (${players.length}/3)` : `${players.length} players ready`}</p>
-        ${state.isHost ? `
-          <button class="btn btn-primary ${players.length < 3 ? 'btn-disabled' : ''}" 
-            onclick="startGame()" ${players.length < 3 ? 'disabled' : ''}>
-            ⚡ Start Game
-          </button>
-          <p class="hint">Share the QR code or code <strong>${state.gameCode}</strong> to invite friends</p>
-        ` : `<p class="hint">Waiting for host to start...</p>`}
-      </div>
-    </div>
-  `);
+      '<input id="codeInput" class="input-field" type="text" placeholder="e.g. ABC12" maxlength="5" autocomplete="off"'+
+        ' style="text-transform:uppercase;letter-spacing:.2em;font-size:22px;text-align:center"/>'+
+      '<button class="btn btn-primary" onclick="joinByCode()">Join →</button>'+
+    '</div>'+
+    '</div>'
+  );
+  document.getElementById('codeInput').addEventListener('keydown',function(e){if(e.key==='Enter')joinByCode();});
 
-  // Generate QR
-  setTimeout(() => {
-    const qrEl = document.getElementById('qrbox');
-    if (qrEl) {
-      new QRCode(qrEl, {
-        text: joinUrl,
-        width: 100, height: 100,
-        colorDark: '#0a0a0a',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
+  // Start QR scanner
+  setTimeout(function(){
+    if(typeof Html5Qrcode === 'undefined'){ return; }
+    try{
+      var scanner = new Html5Qrcode('qr-reader');
+      G.qrScanner = scanner;
+      scanner.start(
+        { facingMode:'environment' },
+        { fps:10, qrbox:{ width:200, height:200 } },
+        function(decodedText){
+          // Parse the join URL
+          var code = null;
+          try{
+            var url = new URL(decodedText);
+            code = url.searchParams.get('join');
+          } catch(e){
+            // Maybe it's just the code itself
+            if(decodedText && decodedText.length >= 4 && decodedText.length <= 6){
+              code = decodedText.toUpperCase();
+            }
+          }
+          if(code){
+            var statusEl = document.getElementById('scanStatus');
+            if(statusEl){ statusEl.textContent='✅ Code found: '+code; statusEl.className='scan-status scan-success'; }
+            stopScanner();
+            setTimeout(function(){ joinByCode(code.toUpperCase()); }, 400);
+          }
+        },
+        function(){ /* scan miss, ignore */ }
+      ).catch(function(err){ 
+        var statusEl=document.getElementById('scanStatus');
+        if(statusEl){ statusEl.textContent='Camera unavailable — enter code manually'; }
       });
+    } catch(e){
+      var statusEl=document.getElementById('scanStatus');
+      if(statusEl){ statusEl.textContent='Camera unavailable — enter code manually'; }
+    }
+  }, 300);
+}
+
+// ── HOST GAME ─────────────────────────────────────────────────────────────
+function hostGame(){
+  G.gameCode = genCode();
+  G.playerId = genId();
+  G.isHost   = true;
+  showNameEntry(true, G.gameCode);
+}
+
+function showNameEntry(isHost, code){
+  stopScanner();
+  var action = isHost ? 'submitHostName()' : "submitJoinName('"+code+"')";
+  var btnLabel = isHost ? '🚀 Create Lobby' : '✅ Join Game';
+  R(
+    '<div class="screen" style="justify-content:center">'+
+    '<div class="panel">'+
+      '<button class="back-btn" onclick="showHome()">← Back</button>'+
+      '<h2 class="panel-title">'+(isHost?'Name Yourself':'Your Name')+'</h2>'+
+      '<p class="panel-sub">Game Code: <span class="code-badge">'+code+'</span></p>'+
+      '<input id="nameInput" class="input-field" type="text" placeholder="Enter your name…" maxlength="16" autocomplete="off"/>'+
+      '<button class="btn btn-primary" onclick="'+action+'">'+btnLabel+'</button>'+
+    '</div>'+
+    '</div>'
+  );
+  var ni = document.getElementById('nameInput');
+  ni.focus();
+  ni.addEventListener('keydown', function(e){
+    if(e.key==='Enter'){ isHost ? submitHostName() : submitJoinName(code); }
+  });
+}
+
+function submitHostName(){
+  var name = document.getElementById('nameInput').value.trim();
+  if(!name){ shake('nameInput'); return; }
+  G.playerName = name;
+  var code = G.gameCode, pid = G.playerId;
+  var gameObj = { host:pid, status:'lobby', createdAt:Date.now(), players:{} };
+  gameObj.players[pid] = { name:name, isHost:true };
+  db.ref('games/'+code).set(gameObj)
+    .then(function(){ listenGame(code); showLobby(); })
+    .catch(function(e){ toast('Firebase error: '+e.message); });
+}
+
+function joinByCode(codeOverride){
+  stopScanner();
+  var code = codeOverride || (document.getElementById('codeInput') && document.getElementById('codeInput').value.trim().toUpperCase());
+  if(!code || code.length < 4){ shake('codeInput'); return; }
+  db.ref('games/'+code).once('value').then(function(snap){
+    if(!snap.exists()){ toast('Game not found. Check the code.'); return; }
+    var gd = snap.val();
+    if(gd.status !== 'lobby'){ toast('This game has already started.'); return; }
+    G.gameCode  = code;
+    G.playerId  = genId();
+    G.isHost    = false;
+    showNameEntry(false, code);
+  }).catch(function(e){ toast('Error: '+e.message); });
+}
+
+function submitJoinName(code){
+  var name = document.getElementById('nameInput').value.trim();
+  if(!name){ shake('nameInput'); return; }
+  G.playerName = name;
+  db.ref('games/'+code+'/players/'+G.playerId).set({ name:name, isHost:false })
+    .then(function(){ listenGame(code); showLobby(); })
+    .catch(function(e){ toast('Error: '+e.message); });
+}
+
+// ── LOBBY ─────────────────────────────────────────────────────────────────
+function showLobby(){
+  G.view = 'lobby';
+  var players  = G.players || {};
+  var pIds     = Object.keys(players);
+  var count    = pIds.length;
+  // No player limit — min 2 to start
+  var canStart = G.isHost && count >= 2;
+  var joinUrl  = location.origin + location.pathname + '?join=' + G.gameCode;
+
+  var chips = pIds.map(function(id){
+    var p = players[id];
+    return '<div class="player-chip'+(p.isHost?' host-chip':'')+'">'+
+      '<div class="player-avatar">'+p.name[0].toUpperCase()+'</div>'+
+      '<span>'+p.name+'</span>'+
+      (p.isHost ? '<span style="font-size:14px">👑</span>' : '')+
+    '</div>';
+  }).join('');
+
+  var footer = G.isHost
+    ? '<button class="btn btn-primary"'+(canStart?'':' disabled')+' onclick="startGame()">⚡ Start Game</button>'+
+      '<p class="hint">Share code <strong style="color:var(--accent)">'+G.gameCode+'</strong> or scan the QR to invite friends<br>'+
+      '<span style="color:var(--accent2)">No player limit</span> · Minimum 2 to start</p>'
+    : '<p class="hint">Waiting for the host to start…</p>';
+
+  R(
+    '<div class="screen">'+
+    '<div class="lobby-header">'+
+      '<div>'+
+        '<div class="lbl">Game Code</div>'+
+        '<div class="big-code">'+G.gameCode+'</div>'+
+        '<div class="player-count-badge" style="margin-top:6px">'+count+' player'+(count!==1?'s':'')+' joined</div>'+
+      '</div>'+
+      '<div id="qrbox" class="qr-box"></div>'+
+    '</div>'+
+    '<div class="player-grid" id="playerList">'+chips+'</div>'+
+    '<div class="lobby-footer">'+
+      '<p class="waiting-text">'+(count<2?'Need at least 2 players ('+count+'/2)':count+' players in lobby')+'</p>'+
+      footer+
+    '</div>'+
+    '</div>'
+  );
+
+  setTimeout(function(){
+    var qrEl = document.getElementById('qrbox');
+    if(qrEl && typeof QRCode !== 'undefined'){
+      qrEl.innerHTML = '';
+      new QRCode(qrEl,{ text:joinUrl, width:96, height:96, colorDark:'#080810', colorLight:'#ffffff' });
     }
   }, 100);
 }
 
-async function startGame() {
-  if (!state.isHost) return;
-  const players = state.players;
-  const ids = Object.keys(players);
-  if (ids.length < 3) return;
+// ── START GAME ────────────────────────────────────────────────────────────
+function startGame(){
+  if(!G.isHost) return;
+  var players = G.players;
+  var ids = Object.keys(players);
+  if(ids.length < 2) return;
 
-  const wordPair = pickRandom(WORD_BANK);
-  const shuffled = shuffle(ids);
-  const impostorId = shuffled[0];
+  var pair = rnd(WORDS);
+  var shuffled = shuffle(ids);
+  var impostorId = shuffled[0]; // always 1 impostor regardless of player count
 
-  const roles = {};
-  ids.forEach(id => {
+  var roles = {};
+  ids.forEach(function(id){
     roles[id] = {
-      role: id === impostorId ? 'impostor' : 'real',
-      word: id === impostorId ? wordPair.impostor : wordPair.real,
+      role: id===impostorId ? 'impostor' : 'real',
+      word: id===impostorId ? pair.imp : pair.real
     };
   });
 
-  await update(ref(db, `games/${state.gameCode}`), {
-    status: 'role',
-    roles,
-    realWord: wordPair.real,
-    impostorWord: wordPair.impostor,
-    votes: {},
-    round: 1,
+  db.ref('games/'+G.gameCode).update({
+    status:'role', roles:roles,
+    realWord:pair.real, impostorWord:pair.imp, votes:null, round:1
   });
 }
 
-function showRole() {
-  state.view = 'role';
-  const gameData = state.gameData;
-  const myRole = gameData.roles?.[state.playerId];
-  if (!myRole) return;
+// ── ROLE REVEAL ───────────────────────────────────────────────────────────
+function showRole(){
+  G.view = 'role';
+  var myRole = G.gameData && G.gameData.roles && G.gameData.roles[G.playerId];
+  if(!myRole){ toast('Waiting for role assignment…'); return; }
+  G.role   = myRole.role;
+  G.myWord = myRole.word;
+  var isImp = G.role === 'impostor';
 
-  state.role = myRole.role;
-  state.myWord = myRole.word;
-
-  const isImp = state.role === 'impostor';
-
-  render(`
-    <div class="screen role-screen">
-      <div class="role-card ${isImp ? 'card-impostor' : 'card-crew'}">
-        <div class="role-eyeball">${isImp ? '🔴' : '🟢'}</div>
-        <div class="role-label">${isImp ? 'YOU ARE THE' : 'YOU ARE'}</div>
-        <div class="role-title">${isImp ? 'IMPOSTOR' : 'CREW'}</div>
-        <div class="role-divider"></div>
-        <div class="role-word-label">Your Word</div>
-        <div class="role-word">${myRole.word}</div>
-        ${isImp ? '<div class="role-hint">🕵️ Blend in. Don\'t get caught.</div>' : '<div class="role-hint">🗣️ Describe your word. Find the impostor.</div>'}
-        <button class="btn btn-ghost" onclick="showDiscuss()">I\'m Ready →</button>
-      </div>
-    </div>
-  `);
+  R(
+    '<div class="screen role-screen">'+
+    '<div class="role-card '+(isImp?'card-impostor':'card-crew')+'">'+
+      '<div class="role-eyeball">'+(isImp?'🔴':'🟢')+'</div>'+
+      '<div class="role-label">'+(isImp?'YOU ARE THE':'YOU ARE')+'</div>'+
+      '<div class="role-title">'+(isImp?'IMPOSTOR':'CREW')+'</div>'+
+      '<div class="role-divider"></div>'+
+      '<div class="role-word-label">Your Secret Word</div>'+
+      '<div class="role-word">'+myRole.word+'</div>'+
+      '<div class="role-hint">'+(isImp?'🕵️ Blend in. Don\'t get caught.':'🗣️ Give a clue. Find the impostor.')+'</div>'+
+      '<button class="btn btn-ghost" style="margin-top:8px" onclick="goToDiscuss()">I\'m Ready →</button>'+
+    '</div>'+
+    '</div>'
+  );
 }
 
-function showDiscuss() {
-  state.view = 'discuss';
-  const players = state.players;
-
-  render(`
-    <div class="screen discuss-screen">
-      <div class="discuss-header">
-        <div class="phase-badge">💬 DISCUSSION</div>
-        <h2 class="discuss-title">Talk it out</h2>
-        <p class="discuss-sub">Each player gives ONE clue about their word. Don't reveal it!</p>
-      </div>
-
-      <div class="your-word-bar">
-        Your word: <strong>${state.myWord}</strong>
-        <span class="role-tag ${state.role}">${state.role === 'impostor' ? '🔴 Impostor' : '🟢 Crew'}</span>
-      </div>
-
-      <div class="player-order">
-        <p class="order-label">Players</p>
-        <div class="player-list-vert">
-          ${Object.entries(players).map(([id, p]) => `
-            <div class="player-row ${id === state.playerId ? 'my-row' : ''}">
-              <span class="avatar-sm">${p.name[0].toUpperCase()}</span>
-              <span>${p.name}${id === state.playerId ? ' (You)' : ''}</span>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-
-      <div class="discuss-footer">
-        ${state.isHost ? `
-          <button class="btn btn-primary" onclick="startVote()">🗳 Start Voting</button>
-        ` : `<p class="hint">Host will start voting when ready</p>`}
-      </div>
-    </div>
-  `);
+function goToDiscuss(){
+  if(G.isHost){
+    db.ref('games/'+G.gameCode).update({ status:'discuss' });
+  } else {
+    showDiscuss();
+  }
 }
 
-async function startVote() {
-  if (!state.isHost) return;
-  await update(ref(db, `games/${state.gameCode}`), { status: 'vote', votes: {} });
+// ── DISCUSS ───────────────────────────────────────────────────────────────
+function showDiscuss(){
+  G.view = 'discuss';
+  var players = G.players;
+  var rows = Object.keys(players).map(function(id){
+    var p = players[id], isMe = id===G.playerId;
+    return '<div class="player-row'+(isMe?' my-row':'')+'">'+
+      '<div class="avatar-sm">'+p.name[0].toUpperCase()+'</div>'+
+      '<span>'+p.name+(isMe?' <span style="color:var(--accent2);font-size:12px">(You)</span>':'')+'</span>'+
+    '</div>';
+  }).join('');
+
+  R(
+    '<div class="screen">'+
+    '<div class="phase-badge">💬 DISCUSSION PHASE</div>'+
+    '<div style="text-align:center">'+
+      '<h2 style="font-size:28px;font-weight:800">Talk it out</h2>'+
+      '<p style="font-size:14px;color:var(--muted);margin-top:6px">Give ONE clue about your word. Don\'t say it directly!</p>'+
+    '</div>'+
+    '<div class="your-word-bar">'+
+      'Your word: <strong>'+G.myWord+'</strong>'+
+      '<span class="role-tag '+G.role+'">'+(G.role==='impostor'?'🔴 Impostor':'🟢 Crew')+'</span>'+
+    '</div>'+
+    '<div style="width:100%">'+
+      '<p class="order-label">Players ('+Object.keys(players).length+')</p>'+
+      '<div class="player-list-vert">'+rows+'</div>'+
+    '</div>'+
+    '<div style="width:100%;text-align:center">'+
+      (G.isHost
+        ? '<button class="btn btn-primary" onclick="startVote()">🗳 Start Voting</button>'
+        : '<p class="hint">Waiting for host to open voting…</p>')+
+    '</div>'+
+    '</div>'
+  );
 }
 
-function showVote() {
-  state.view = 'vote';
-  const players = state.players;
-  const votes = state.gameData?.votes || {};
-
-  const myVote = votes[state.playerId];
-  const voteCount = Object.keys(votes).length;
-  const totalPlayers = Object.keys(players).length;
-
-  render(`
-    <div class="screen vote-screen">
-      <div class="phase-badge">🗳 VOTING</div>
-      <h2 class="vote-title">Who's the Impostor?</h2>
-      <p class="vote-sub">${voteCount}/${totalPlayers} voted</p>
-
-      <div class="vote-grid">
-        ${Object.entries(players).map(([id, p]) => {
-          const votedFor = myVote === id;
-          const isMe = id === state.playerId;
-          const voteCount = Object.values(votes).filter(v => v === id).length;
-          return `
-            <div class="vote-card ${votedFor ? 'voted' : ''} ${isMe ? 'vote-self' : ''}" 
-                 onclick="${!myVote && !isMe ? `castVote('${id}')` : ''}">
-              <div class="vote-avatar">${p.name[0].toUpperCase()}</div>
-              <div class="vote-name">${p.name}${isMe ? ' (You)' : ''}</div>
-              <div class="vote-count">${voteCount > 0 ? `${voteCount} vote${voteCount > 1 ? 's' : ''}` : ''}</div>
-              ${votedFor ? '<div class="vote-check">✓</div>' : ''}
-            </div>
-          `;
-        }).join('')}
-      </div>
-
-      ${myVote ? '<p class="voted-msg">✅ Vote cast! Waiting for others...</p>' : '<p class="hint">Tap a player to vote them out</p>'}
-    </div>
-  `);
+// ── VOTE ──────────────────────────────────────────────────────────────────
+function startVote(){
+  if(!G.isHost) return;
+  db.ref('games/'+G.gameCode).update({ status:'vote', votes:null });
 }
 
-async function castVote(targetId) {
-  if (state.votedAlready) return;
-  state.votedAlready = true;
-  await set(ref(db, `games/${state.gameCode}/votes/${state.playerId}`), targetId);
+function showVote(){
+  G.view = 'vote';
+  var players = G.players;
+  var votes   = (G.gameData && G.gameData.votes) || {};
+  var myVote  = votes[G.playerId];
+  var voteCount    = Object.keys(votes).length;
+  var totalPlayers = Object.keys(players).length;
+
+  var cards = Object.keys(players).map(function(id){
+    var p = players[id], isMe = id===G.playerId, votedFor = myVote===id;
+    var cnt = Object.values(votes).filter(function(v){ return v===id; }).length;
+    return '<div class="vote-card'+(votedFor?' voted':'')+(isMe?' vote-self':'')+'"'+
+      (!myVote&&!isMe?' onclick="castVote(\''+id+'\')"':'')+'>'+
+      '<div class="vote-avatar">'+p.name[0].toUpperCase()+'</div>'+
+      '<div class="vote-name">'+p.name+(isMe?'<br><span style="font-size:11px;color:var(--muted)">(You)</span>':'')+'</div>'+
+      '<div class="vote-count">'+(cnt>0?cnt+' vote'+(cnt>1?'s':''):'')+'</div>'+
+      (votedFor?'<div class="vote-check">✓</div>':'')+
+    '</div>';
+  }).join('');
+
+  R(
+    '<div class="screen">'+
+    '<div class="phase-badge">🗳 VOTING PHASE</div>'+
+    '<h2 class="vote-title">Who\'s the Impostor?</h2>'+
+    '<p class="vote-sub">'+voteCount+' / '+totalPlayers+' voted</p>'+
+    '<div class="vote-grid">'+cards+'</div>'+
+    (myVote
+      ? '<p class="voted-msg">✅ Vote cast! Waiting for others…</p>'
+      : '<p class="hint" style="text-align:center">Tap a player to vote them out</p>')+
+    '</div>'
+  );
 }
 
-function checkVoteResult() {
-  const players = state.players;
-  const votes = state.gameData?.votes || {};
-  const totalPlayers = Object.keys(players).length;
+function castVote(targetId){
+  if(G.votedAlready) return;
+  G.votedAlready = true;
+  db.ref('games/'+G.gameCode+'/votes/'+G.playerId).set(targetId);
+}
 
-  if (Object.keys(votes).length < totalPlayers) return;
-  if (!state.isHost) return;
+function checkVoteResult(){
+  if(!G.isHost) return;
+  var players = G.players;
+  var votes   = (G.gameData && G.gameData.votes) || {};
+  if(Object.keys(votes).length < Object.keys(players).length) return;
 
-  // Tally
-  const tally = {};
-  Object.values(votes).forEach(v => { tally[v] = (tally[v] || 0) + 1; });
-  const maxVotes = Math.max(...Object.values(tally));
-  const eliminated = Object.keys(tally).filter(id => tally[id] === maxVotes);
+  var tally = {};
+  Object.values(votes).forEach(function(v){ tally[v]=(tally[v]||0)+1; });
+  var maxVotes = Math.max.apply(null, Object.values(tally));
+  var topIds   = Object.keys(tally).filter(function(id){ return tally[id]===maxVotes; });
+  var eliminatedId = topIds[0];
+  var roles = (G.gameData && G.gameData.roles) || {};
+  var impostorId = Object.keys(roles).find(function(id){ return roles[id].role==='impostor'; });
+  var crewWon = eliminatedId === impostorId;
 
-  const eliminatedId = eliminated[0]; // first in tie
-  const impostorId = Object.keys(state.gameData.roles).find(id => state.gameData.roles[id].role === 'impostor');
-  const crewWon = eliminatedId === impostorId;
-
-  update(ref(db, `games/${state.gameCode}`), {
-    status: 'result',
-    eliminatedId,
-    crewWon,
-    tally,
+  db.ref('games/'+G.gameCode).update({
+    status:'result', eliminatedId:eliminatedId, crewWon:crewWon, tally:tally
   });
 }
 
-function showResult() {
-  state.view = 'result';
-  const gd = state.gameData;
-  const crewWon = gd.crewWon;
-  const eliminatedId = gd.eliminatedId;
-  const eliminatedName = state.players[eliminatedId]?.name || 'Unknown';
-  const impostorId = Object.keys(gd.roles || {}).find(id => gd.roles[id].role === 'impostor');
-  const impostorName = state.players[impostorId]?.name || 'Unknown';
-  const realWord = gd.realWord;
-  const impostorWord = gd.impostorWord;
+// ── RESULT ────────────────────────────────────────────────────────────────
+function showResult(){
+  G.view = 'result';
+  var gd = G.gameData;
+  var crewWon      = gd.crewWon;
+  var eliminatedId = gd.eliminatedId;
+  var elimName     = (G.players[eliminatedId]||{}).name||'Unknown';
+  var roles        = gd.roles||{};
+  var impostorId   = Object.keys(roles).find(function(id){ return roles[id].role==='impostor'; });
+  var impostorName = (G.players[impostorId]||{}).name||'Unknown';
 
-  render(`
-    <div class="screen result-screen">
-      <div class="result-card ${crewWon ? 'crew-win' : 'imp-win'}">
-        <div class="result-icon">${crewWon ? '🎉' : '😈'}</div>
-        <div class="result-winner">${crewWon ? 'CREW WINS!' : 'IMPOSTOR WINS!'}</div>
-        <div class="result-detail">
-          ${crewWon
-            ? `<strong>${eliminatedName}</strong> was voted out — they were the Impostor!`
-            : `<strong>${eliminatedName}</strong> was eliminated — the Impostor escaped!`}
-        </div>
+  var tallyRows = Object.keys(gd.tally||{})
+    .sort(function(a,b){ return gd.tally[b]-gd.tally[a]; })
+    .map(function(id){
+      var cnt = gd.tally[id];
+      var w = Math.min(cnt*44, 180);
+      return '<div class="tally-row">'+
+        '<span class="tally-name">'+((G.players[id]||{}).name||id)+'</span>'+
+        '<div class="tally-bar"><div class="tally-fill" style="width:'+w+'px">'+cnt+'</div></div>'+
+      '</div>';
+    }).join('');
 
-        <div class="reveal-block">
-          <div class="reveal-row">
-            <span class="reveal-label">🟢 Real Word</span>
-            <span class="reveal-val">${realWord}</span>
-          </div>
-          <div class="reveal-row">
-            <span class="reveal-label">🔴 Impostor Word</span>
-            <span class="reveal-val">${impostorWord}</span>
-          </div>
-          <div class="reveal-row">
-            <span class="reveal-label">🕵️ Impostor Was</span>
-            <span class="reveal-val">${impostorName}</span>
-          </div>
-        </div>
-
-        <div class="vote-results">
-          <p class="tally-label">Final Votes</p>
-          ${Object.entries(gd.tally || {}).sort((a,b)=>b[1]-a[1]).map(([id, cnt]) => `
-            <div class="tally-row">
-              <span>${state.players[id]?.name || id}</span>
-              <div class="tally-bar">
-                <div class="tally-fill" style="width:${cnt * 40}px">${cnt}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-
-        ${state.isHost ? `
-          <button class="btn btn-primary" onclick="playAgain()">🔁 Play Again</button>
-        ` : `<p class="hint">Waiting for host to restart...</p>`}
-      </div>
-    </div>
-  `);
+  R(
+    '<div class="screen result-screen">'+
+    '<div class="result-card '+(crewWon?'crew-win':'imp-win')+'">'+
+      '<div class="result-icon">'+(crewWon?'🎉':'😈')+'</div>'+
+      '<div class="result-winner">'+(crewWon?'CREW WINS!':'IMPOSTOR WINS!')+'</div>'+
+      '<p class="result-detail">'+
+        (crewWon
+          ? '<strong>'+elimName+'</strong> was voted out — they were the Impostor!'
+          : '<strong>'+elimName+'</strong> was eliminated — the Impostor escaped!')+
+      '</p>'+
+      '<div class="reveal-block">'+
+        '<div class="reveal-row"><span class="reveal-label">🟢 Crew\'s Word</span><span class="reveal-val">'+gd.realWord+'</span></div>'+
+        '<div class="reveal-row"><span class="reveal-label">🔴 Impostor\'s Word</span><span class="reveal-val">'+gd.impostorWord+'</span></div>'+
+        '<div class="reveal-row"><span class="reveal-label">🕵️ Impostor Was</span><span class="reveal-val">'+impostorName+'</span></div>'+
+      '</div>'+
+      '<div style="width:100%"><p class="tally-label">Final Votes</p>'+tallyRows+'</div>'+
+      (G.isHost
+        ? '<button class="btn btn-primary" onclick="playAgain()">🔁 Play Again</button>'
+        : '<p class="hint">Waiting for host to restart…</p>')+
+    '</div>'+
+    '</div>'
+  );
 }
 
-async function playAgain() {
-  if (!state.isHost) return;
-  // Reset game to lobby
-  const players = state.players;
-  const resetPlayers = {};
-  Object.entries(players).forEach(([id, p]) => {
-    resetPlayers[id] = { name: p.name, isHost: p.isHost, ready: false };
+function playAgain(){
+  if(!G.isHost) return;
+  G.votedAlready = false;
+  var resetPlayers = {};
+  Object.keys(G.players).forEach(function(id){
+    var p = G.players[id];
+    resetPlayers[id] = { name:p.name, isHost:!!p.isHost };
   });
-
-  await set(ref(db, `games/${state.gameCode}`), {
-    host: state.playerId,
-    status: 'lobby',
-    createdAt: Date.now(),
-    players: resetPlayers,
+  db.ref('games/'+G.gameCode).set({
+    host:G.playerId, status:'lobby', createdAt:Date.now(), players:resetPlayers
   });
-
-  state.votedAlready = false;
 }
 
-function showError(msg) {
-  render(`
-    <div class="screen name-screen">
-      <div class="panel error-panel">
-        <div class="error-icon">⚠️</div>
-        <h2>${msg}</h2>
-        <button class="btn btn-secondary" onclick="showHome()">Go Home</button>
-      </div>
-    </div>
-  `);
-}
+// ── REALTIME LISTENER ─────────────────────────────────────────────────────
+function listenGame(code){
+  if(G.dbOff){ G.dbOff(); G.dbOff=null; }
+  var gameRef = db.ref('games/'+code);
+  var handler = gameRef.on('value', function(snap){
+    if(!snap.exists()) return;
+    var gd = snap.val();
+    G.gameData = gd;
+    G.players  = gd.players || {};
 
-function shake(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.add('shake');
-  setTimeout(() => el.classList.remove('shake'), 500);
-}
-
-// ─── REALTIME LISTENER ──────────────────────────────────────────────────────
-function listenGame(code) {
-  if (state.unsubscribe) state.unsubscribe();
-  const gameRef = ref(db, `games/${code}`);
-  const unsub = onValue(gameRef, snap => {
-    if (!snap.exists()) return;
-    const gd = snap.val();
-    state.gameData = gd;
-    state.players = gd.players || {};
-
-    switch (gd.status) {
+    switch(gd.status){
       case 'lobby':
-        state.votedAlready = false;
+        G.votedAlready = false;
         showLobby();
         break;
       case 'role':
-        if (state.view !== 'role') showRole();
+        if(G.view!=='role') showRole();
         break;
       case 'discuss':
-        if (state.view !== 'discuss') showDiscuss();
+        if(G.view!=='discuss') showDiscuss();
         break;
       case 'vote':
         showVote();
         checkVoteResult();
         break;
       case 'result':
-        if (state.view !== 'result') showResult();
+        if(G.view!=='result') showResult();
         break;
     }
   });
-  state.unsubscribe = () => unsub();
+  G.dbOff = function(){ gameRef.off('value', handler); };
 }
 
-// ─── QR JOIN DETECTION ──────────────────────────────────────────────────────
-function checkUrlParams() {
-  const params = new URLSearchParams(location.search);
-  const joinCode = params.get('join');
-  if (joinCode) {
-    // Remove param from URL
+// ── URL PARAM AUTO-JOIN ───────────────────────────────────────────────────
+function checkUrlParams(){
+  var params = new URLSearchParams(location.search);
+  var joinCode = params.get('join');
+  if(joinCode){
     history.replaceState({}, '', location.pathname);
-    // Auto-join
-    state.gameCode = joinCode.toUpperCase();
-    state.playerId = genId();
-    state.isHost = false;
-    saveLocal();
-    showNameEntry(false, joinCode.toUpperCase());
+    G.playerId = genId();
+    G.isHost   = false;
+    joinByCode(joinCode.toUpperCase());
   }
 }
 
-// ─── EXPOSE TO GLOBAL ────────────────────────────────────────────────────────
-window.hostGame = hostGame;
-window.showJoinManual = showJoinManual;
-window.showHome = showHome;
-window.joinByCode = joinByCode;
-window.submitHostName = submitHostName;
-window.submitJoinName = submitJoinName;
-window.startGame = startGame;
-window.showDiscuss = showDiscuss;
-window.startVote = startVote;
-window.castVote = castVote;
-window.playAgain = playAgain;
-window.showRole = showRole;
-
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// ── BOOT ─────────────────────────────────────────────────────────────────
 checkUrlParams();
 showHome();
 </script>
-
-<style>
-/* ── RESET & BASE ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:       #080810;
-  --surface:  #111120;
-  --surface2: #1a1a30;
-  --border:   #2a2a45;
-  --text:     #e8e8f0;
-  --muted:    #7070a0;
-  --accent:   #ff4d6d;
-  --accent2:  #7b61ff;
-  --green:    #22d68a;
-  --yellow:   #f5c542;
-  --radius:   16px;
-  --font-head: 'Syne', sans-serif;
-  --font-mono: 'Space Mono', monospace;
-}
-
-html, body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-head);
-  -webkit-font-smoothing: antialiased;
-}
-
-#app {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* ── SCREENS ─────────────────────────────────────────────── */
-.screen {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 16px 48px;
-}
-
-/* ── HOME SCREEN ─────────────────────────────────────────── */
-.home-screen {
-  position: relative;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.home-bg {
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(123,97,255,0.18) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255,77,109,0.12) 0%, transparent 60%);
-  pointer-events: none;
-}
-
-.home-content {
-  position: relative;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 48px;
-  max-width: 400px;
-  width: 100%;
-}
-
-.logo-block { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-
-.eye-icon {
-  font-size: 64px;
-  animation: pulse-eye 2s ease-in-out infinite;
-  filter: drop-shadow(0 0 24px rgba(255,77,109,0.6));
-}
-@keyframes pulse-eye {
-  0%,100% { transform: scale(1); }
-  50% { transform: scale(1.12); }
-}
-
-.logo-text {
-  font-size: clamp(52px, 12vw, 80px);
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  background: linear-gradient(135deg, #ff4d6d, #7b61ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1;
-}
-
-.tagline {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: var(--muted);
-  text-transform: uppercase;
-}
-
-.home-actions { display: flex; flex-direction: column; gap: 12px; width: 100%; }
-
-.home-footer { color: var(--muted); font-size: 13px; font-family: var(--font-mono); }
-
-/* ── BUTTONS ─────────────────────────────────────────────── */
-.btn {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  width: 100%; padding: 16px 24px;
-  border: none; border-radius: var(--radius);
-  font-family: var(--font-head); font-size: 16px; font-weight: 700;
-  letter-spacing: 0.05em; cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
-}
-.btn:hover { transform: translateY(-2px); }
-.btn:active { transform: translateY(0); }
-
-.btn-primary {
-  background: linear-gradient(135deg, #ff4d6d, #c0392b);
-  color: #fff;
-  box-shadow: 0 8px 30px rgba(255,77,109,0.35);
-}
-.btn-primary:hover { box-shadow: 0 12px 40px rgba(255,77,109,0.55); }
-
-.btn-secondary {
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.btn-secondary:hover { border-color: var(--accent2); }
-
-.btn-ghost {
-  background: transparent;
-  color: var(--accent2);
-  border: 1px solid var(--accent2);
-  max-width: 240px; margin: 0 auto;
-}
-.btn-disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-disabled:hover { transform: none; }
-
-.btn-icon { font-size: 18px; }
-
-/* ── PANEL (name entry) ────────────────────────────────── */
-.name-screen { justify-content: center; }
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 36px 28px;
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
-}
-
-.panel-title { font-size: 28px; font-weight: 800; }
-.panel-sub { font-size: 14px; color: var(--muted); }
-.code-badge {
-  font-family: var(--font-mono); letter-spacing: 0.2em;
-  background: var(--surface2); border: 1px solid var(--border);
-  padding: 2px 10px; border-radius: 8px; font-size: 16px;
-  color: var(--accent);
-}
-
-.input-field {
-  width: 100%; padding: 14px 18px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--radius); color: var(--text);
-  font-family: var(--font-head); font-size: 16px;
-  outline: none; transition: border-color 0.2s;
-}
-.input-field:focus { border-color: var(--accent2); }
-.input-field::placeholder { color: var(--muted); }
-
-.back-btn {
-  background: none; border: none; color: var(--muted);
-  font-family: var(--font-head); font-size: 14px;
-  cursor: pointer; align-self: flex-start;
-  transition: color 0.15s;
-}
-.back-btn:hover { color: var(--text); }
-
-.error-panel { text-align: center; }
-.error-icon { font-size: 48px; }
-
-/* ── LOBBY ───────────────────────────────────────────────── */
-.lobby-screen {
-  max-width: 480px; margin: 0 auto;
-  gap: 24px; padding-top: 40px;
-}
-.lobby-header {
-  width: 100%; display: flex;
-  justify-content: space-between; align-items: center;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 20px; padding: 20px 24px;
-}
-.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 4px; }
-.big-code {
-  font-family: var(--font-mono); font-size: 40px; font-weight: 700;
-  letter-spacing: 0.2em; color: var(--accent);
-}
-.qr-box {
-  background: #fff; border-radius: 12px; padding: 8px;
-  display: flex; align-items: center; justify-content: center;
-}
-
-.player-grid {
-  width: 100%; display: flex; flex-wrap: wrap; gap: 10px;
-}
-.player-chip {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 50px; padding: 10px 16px;
-  animation: pop-in 0.3s ease;
-}
-@keyframes pop-in {
-  from { transform: scale(0.8); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-.host-chip { border-color: var(--yellow); }
-.player-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent2), var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 14px;
-}
-.crown { font-size: 14px; }
-
-.lobby-footer {
-  width: 100%; display: flex; flex-direction: column;
-  align-items: center; gap: 12px; text-align: center;
-}
-.waiting-text { font-size: 15px; color: var(--muted); }
-.hint { font-size: 13px; color: var(--muted); font-family: var(--font-mono); }
-
-/* ── ROLE SCREEN ─────────────────────────────────────────── */
-.role-screen { justify-content: center; }
-.role-card {
-  width: 100%; max-width: 380px;
-  border-radius: 28px; padding: 44px 32px;
-  display: flex; flex-direction: column;
-  align-items: center; text-align: center; gap: 16px;
-  border: 1px solid var(--border);
-  animation: card-reveal 0.5s cubic-bezier(0.34,1.56,0.64,1);
-}
-@keyframes card-reveal {
-  from { transform: scale(0.85) rotateY(15deg); opacity: 0; }
-  to { transform: scale(1) rotateY(0); opacity: 1; }
-}
-.card-impostor { background: linear-gradient(160deg, #1a0810, #2d0818); border-color: #ff4d6d44; }
-.card-crew { background: linear-gradient(160deg, #081a12, #0d2d1a); border-color: #22d68a44; }
-
-.role-eyeball { font-size: 56px; animation: pulse-eye 1.5s ease-in-out infinite; }
-.role-label { font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); }
-.role-title {
-  font-size: 52px; font-weight: 800; letter-spacing: 0.1em;
-  color: var(--text); line-height: 1;
-}
-.card-impostor .role-title { color: var(--accent); }
-.card-crew .role-title { color: var(--green); }
-
-.role-divider { width: 60px; height: 2px; background: var(--border); }
-
-.role-word-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--muted); }
-.role-word {
-  font-size: 36px; font-weight: 800;
-  background: linear-gradient(135deg, var(--text), var(--muted));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.role-hint { font-size: 14px; color: var(--muted); font-family: var(--font-mono); }
-
-/* ── DISCUSS ─────────────────────────────────────────────── */
-.discuss-screen { max-width: 480px; margin: 0 auto; gap: 20px; padding-top: 40px; }
-.discuss-header { text-align: center; }
-.discuss-title { font-size: 32px; font-weight: 800; }
-.discuss-sub { font-size: 14px; color: var(--muted); margin-top: 8px; }
-
-.your-word-bar {
-  width: 100%; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 14px 20px;
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 16px;
-}
-.role-tag {
-  font-size: 12px; padding: 4px 12px; border-radius: 20px;
-  font-family: var(--font-mono);
-}
-.role-tag.real { background: rgba(34,214,138,0.15); color: var(--green); }
-.role-tag.impostor { background: rgba(255,77,109,0.15); color: var(--accent); }
-
-.order-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 10px; }
-.player-list-vert { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.player-row {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; padding: 12px 16px;
-}
-.my-row { border-color: var(--accent2); background: rgba(123,97,255,0.08); }
-.avatar-sm {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent2), var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 13px; flex-shrink: 0;
-}
-
-.discuss-footer { width: 100%; text-align: center; }
-.player-order { width: 100%; }
-
-/* ── VOTE ────────────────────────────────────────────────── */
-.vote-screen { max-width: 480px; margin: 0 auto; gap: 20px; padding-top: 40px; text-align: center; }
-.vote-title { font-size: 32px; font-weight: 800; }
-.vote-sub { font-size: 14px; color: var(--muted); font-family: var(--font-mono); }
-
-.vote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
-.vote-card {
-  background: var(--surface); border: 2px solid var(--border);
-  border-radius: 16px; padding: 20px 12px;
-  cursor: pointer; transition: all 0.2s; position: relative;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-}
-.vote-card:not(.vote-self):hover { border-color: var(--accent); transform: translateY(-2px); }
-.vote-card.voted { border-color: var(--accent); background: rgba(255,77,109,0.1); }
-.vote-self { opacity: 0.45; cursor: default; }
-.vote-avatar {
-  width: 50px; height: 50px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent2), var(--accent));
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; font-weight: 800;
-}
-.vote-name { font-size: 15px; font-weight: 700; }
-.vote-count { font-size: 12px; color: var(--accent); font-family: var(--font-mono); min-height: 16px; }
-.vote-check {
-  position: absolute; top: 8px; right: 10px;
-  color: var(--accent); font-size: 18px; font-weight: 800;
-}
-.voted-msg { color: var(--green); font-size: 15px; }
-
-/* ── RESULT ──────────────────────────────────────────────── */
-.result-screen { justify-content: center; }
-.result-card {
-  width: 100%; max-width: 420px;
-  border-radius: 28px; padding: 40px 28px;
-  display: flex; flex-direction: column; align-items: center;
-  text-align: center; gap: 20px;
-  border: 1px solid var(--border);
-  animation: card-reveal 0.5s ease;
-}
-.crew-win { background: linear-gradient(160deg, #081a12, #0d2a18); border-color: #22d68a44; }
-.imp-win  { background: linear-gradient(160deg, #1a0810, #280d18); border-color: #ff4d6d44; }
-
-.result-icon { font-size: 64px; animation: pulse-eye 1.5s ease-in-out infinite; }
-.result-winner {
-  font-size: 40px; font-weight: 800; letter-spacing: 0.08em;
-}
-.crew-win .result-winner { color: var(--green); }
-.imp-win .result-winner { color: var(--accent); }
-.result-detail { font-size: 16px; color: var(--muted); line-height: 1.6; }
-
-.reveal-block {
-  width: 100%; background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border); border-radius: 14px; padding: 16px;
-  display: flex; flex-direction: column; gap: 10px;
-}
-.reveal-row { display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
-.reveal-label { color: var(--muted); font-size: 13px; }
-.reveal-val { font-weight: 700; }
-
-.vote-results { width: 100%; }
-.tally-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 10px; text-align: left; }
-.tally-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 14px; }
-.tally-bar { flex: 1; background: var(--surface2); border-radius: 6px; overflow: hidden; height: 24px; }
-.tally-fill {
-  height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2));
-  border-radius: 6px; display: flex; align-items: center; padding: 0 8px;
-  font-size: 12px; font-weight: 700; min-width: 24px;
-  transition: width 0.8s ease;
-}
-
-/* ── PHASE BADGE ─────────────────────────────────────────── */
-.phase-badge {
-  font-family: var(--font-mono); font-size: 11px;
-  letter-spacing: 0.2em; text-transform: uppercase;
-  background: var(--surface2); border: 1px solid var(--border);
-  padding: 6px 14px; border-radius: 20px; color: var(--muted);
-}
-
-/* ── SHAKE ANIMATION ─────────────────────────────────────── */
-@keyframes shake {
-  0%,100% { transform: translateX(0); }
-  20% { transform: translateX(-8px); }
-  40% { transform: translateX(8px); }
-  60% { transform: translateX(-6px); }
-  80% { transform: translateX(6px); }
-}
-.shake { animation: shake 0.4s ease; border-color: var(--accent) !important; }
-
-/* ── SCROLLBAR ───────────────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-</style>
-</head>
-<body>
-<div id="app"></div>
 </body>
 </html>
