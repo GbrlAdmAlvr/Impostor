@@ -229,6 +229,23 @@ html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:va
 .kick-btn{background:none;border:none;padding:4px 8px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--fog);transition:all .15s;flex-shrink:0;line-height:1}
 .kick-btn:hover{color:var(--rose2);background:rgba(232,69,90,.12)}
 
+/* ── WORD REVEAL TOGGLE ──────────────────────── */
+.word-hidden-wrap{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%}
+.word-blur{font-family:var(--serif);font-size:clamp(26px,7vw,46px);font-weight:700;line-height:1.15;color:var(--snow);word-break:break-word;filter:blur(10px);user-select:none;pointer-events:none;transition:filter .35s ease,opacity .35s ease;opacity:.55;text-align:center;max-width:100%;padding:0 4px}
+.word-blur.revealed{filter:blur(0);opacity:1}
+.peek-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:20px;border:1.5px solid var(--line2);background:rgba(255,255,255,.04);color:var(--dust);font-family:var(--mono);font-size:11px;letter-spacing:.1em;cursor:pointer;transition:all .18s;user-select:none}
+.peek-btn:hover{border-color:var(--dust);color:var(--snow);background:rgba(255,255,255,.07)}
+.peek-btn.is-revealed{border-color:rgba(232,69,90,.4);color:var(--rose2);background:rgba(232,69,90,.06)}
+.peek-btn svg{flex-shrink:0;transition:opacity .2s}
+
+/* word-bar peek variant (discuss screen) */
+.word-bar-peek{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.word-bar-hidden{font-family:var(--serif);font-size:clamp(16px,4.5vw,24px);font-weight:700;color:var(--snow);filter:blur(8px);user-select:none;pointer-events:none;transition:filter .3s,opacity .3s;opacity:.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.word-bar-hidden.revealed{filter:blur(0);opacity:1}
+.bar-peek-btn{background:none;border:1px solid var(--line2);border-radius:8px;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;color:var(--fog);font-family:var(--mono);font-size:10px;letter-spacing:.06em;transition:all .15s;flex-shrink:0;white-space:nowrap}
+.bar-peek-btn:hover{border-color:var(--dust);color:var(--snow)}
+.bar-peek-btn.is-revealed{border-color:rgba(232,69,90,.4);color:var(--rose2)}
+
 /* ── COPY CODE CHIP ──────────────────────────── */
 .copy-code-chip{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);letter-spacing:.22em;font-size:clamp(32px,10vw,50px);font-weight:500;color:var(--gold2);line-height:1;cursor:pointer;border-radius:8px;padding:2px 6px;margin:-2px -6px;transition:background .15s;user-select:none}
 .copy-code-chip:hover{background:rgba(201,168,76,.1)}
@@ -781,6 +798,8 @@ function showRole(){
   var isImp=G.role==='impostor';
   var round=G.gameData.round||1;
   var failed=G.gameData.failedRounds||[];
+  var eyeIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var eyeOffIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   R(
     '<div class="screen role-screen">'+
     '<div class="role-card '+(isImp?'rc-imp':'rc-crew')+'">'+
@@ -789,13 +808,60 @@ function showRole(){
       '<p class="role-name">'+(isImp?'IMPOSTOR':'CREW')+'</p>'+
       '<div class="role-sep"></div>'+
       '<p class="role-wlabel">Your Secret Word</p>'+
-      '<p class="role-word">'+myRole.word+'</p>'+
-      '<p class="role-hint">'+(isImp?'🕵️ Your word is close but different — blend in.':'🗣️ Give one clue about your word. Find the impostor.')+'</p>'+
+      '<div class="word-hidden-wrap">'+
+        '<p class="word-blur" id="roleWordEl">'+myRole.word+'</p>'+
+        '<button class="peek-btn" id="peekBtn" onclick="toggleRoleWord()">'+
+          '<span id="peekIcon">'+eyeIcon+'</span>'+
+          '<span id="peekLabel">Hold to Reveal</span>'+
+        '</button>'+
+      '</div>'+
+      '<p class="role-hint">'+(isImp?'🕵️ Your word is different — blend in.':'🗣️ Give one clue about your word. Find the impostor.')+'</p>'+
       (round>1?pips(round,failed):'<div style="height:2px"></div>')+
       '<button class="btn btn-ghost" style="max-width:200px;margin-top:4px" onclick="goDiscuss()">I\'m Ready &rarr;</button>'+
     '</div>'+
     '</div>'
   );
+  // Set up hold-to-reveal on the peek button
+  setTimeout(function(){setupPeekBtn();},50);
+}
+
+function setupPeekBtn(){
+  var btn=document.getElementById('peekBtn');
+  var wordEl=document.getElementById('roleWordEl');
+  var label=document.getElementById('peekLabel');
+  var iconEl=document.getElementById('peekIcon');
+  if(!btn||!wordEl) return;
+  var eyeIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var eyeOffIcon='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  var hideTimer=null;
+  function reveal(){
+    wordEl.classList.add('revealed');
+    btn.classList.add('is-revealed');
+    if(iconEl) iconEl.innerHTML=eyeOffIcon;
+    if(label) label.textContent='Tap to Hide';
+    clearTimeout(hideTimer);
+    // Auto-hide after 4 seconds
+    hideTimer=setTimeout(function(){hide();},4000);
+  }
+  function hide(){
+    wordEl.classList.remove('revealed');
+    btn.classList.remove('is-revealed');
+    if(iconEl) iconEl.innerHTML=eyeIcon;
+    if(label) label.textContent='Hold to Reveal';
+    clearTimeout(hideTimer);
+  }
+  btn.onclick=null;
+  // Hold-to-reveal (touch)
+  btn.addEventListener('touchstart',function(e){e.preventDefault();reveal();},{ passive:false });
+  btn.addEventListener('touchend',function(e){e.preventDefault();clearTimeout(hideTimer);hideTimer=setTimeout(hide,200);});
+  // Hold-to-reveal (mouse)
+  btn.addEventListener('mousedown',function(){reveal();});
+  btn.addEventListener('mouseup',function(){clearTimeout(hideTimer);hideTimer=setTimeout(hide,200);});
+  btn.addEventListener('mouseleave',function(){clearTimeout(hideTimer);hideTimer=setTimeout(hide,200);});
+}
+
+function toggleRoleWord(){
+  // Fallback — main logic handled by setupPeekBtn
 }
 
 function goDiscuss(){
@@ -816,6 +882,7 @@ function showDiscuss(){
       (isMe?'<span class="p-badge badge-you">YOU</span>':'')+
     '</div>';
   }).join('');
+  var eyeIcon='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
   R(
     '<div class="screen">'+
     '<div class="phase-row">'+
@@ -824,7 +891,10 @@ function showDiscuss(){
     '</div>'+
     '<div class="word-bar">'+
       '<span class="word-bar-lbl">Your Word</span>'+
-      '<span class="word-bar-val">'+G.myWord+'</span>'+
+      '<div class="word-bar-peek">'+
+        '<span class="word-bar-hidden" id="discussWordEl">'+G.myWord+'</span>'+
+        '<button class="bar-peek-btn" id="barPeekBtn">'+eyeIcon+'<span id="barPeekLabel">Peek</span></button>'+
+      '</div>'+
       '<span class="rtag '+(G.role==='impostor'?'rtag-imp':'rtag-crew')+'">'+(G.role==='impostor'?'IMPOSTOR':'CREW')+'</span>'+
     '</div>'+
     '<div style="width:100%">'+
@@ -839,6 +909,33 @@ function showDiscuss(){
     '</div>'+
     '</div>'
   );
+  // Setup hold-to-peek on the word bar button
+  setTimeout(function(){
+    var btn=document.getElementById('barPeekBtn');
+    var wordEl=document.getElementById('discussWordEl');
+    var lbl=document.getElementById('barPeekLabel');
+    var eyeOffIcon='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+    var eyeOnIcon=eyeIcon;
+    var hideTimer=null;
+    if(!btn||!wordEl) return;
+    function revealBar(){
+      wordEl.classList.add('revealed');btn.classList.add('is-revealed');
+      btn.querySelector('svg').outerHTML; // keep icon
+      if(lbl) lbl.textContent='Hide';
+      clearTimeout(hideTimer);
+      hideTimer=setTimeout(function(){hideBar();},4000);
+    }
+    function hideBar(){
+      wordEl.classList.remove('revealed');btn.classList.remove('is-revealed');
+      if(lbl) lbl.textContent='Peek';
+      clearTimeout(hideTimer);
+    }
+    btn.addEventListener('touchstart',function(e){e.preventDefault();revealBar();},{passive:false});
+    btn.addEventListener('touchend',function(e){e.preventDefault();clearTimeout(hideTimer);hideTimer=setTimeout(hideBar,200);});
+    btn.addEventListener('mousedown',function(){revealBar();});
+    btn.addEventListener('mouseup',function(){clearTimeout(hideTimer);hideTimer=setTimeout(hideBar,200);});
+    btn.addEventListener('mouseleave',function(){clearTimeout(hideTimer);hideTimer=setTimeout(hideBar,200);});
+  },50);
 }
 
 /* ═══════════════ VOTE ═══════════════════════ */
