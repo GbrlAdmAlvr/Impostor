@@ -221,9 +221,19 @@ html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:va
 .vchart-fill-voted{background:linear-gradient(90deg,var(--rose),var(--gold))!important}
 .vchart-count{width:20px;flex-shrink:0;font-size:12px;font-family:var(--mono);color:var(--fog);text-align:right}
 
-/* ── RESET BUTTON ───────────────────────────── */
-.reset-btn{position:fixed;top:16px;right:16px;z-index:900;background:rgba(13,13,20,.85);border:1px solid var(--line2);border-radius:10px;padding:8px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--fog);cursor:pointer;backdrop-filter:blur(8px);transition:all .18s;display:flex;align-items:center;gap:6px}
-.reset-btn:hover{border-color:var(--rose);color:var(--rose2)}
+/* ── RESTART BUTTON (host floating) ─────────── */
+.restart-btn-fixed{position:fixed;top:16px;right:16px;z-index:900;background:rgba(13,13,20,.9);border:1px solid rgba(201,168,76,.35);border-radius:10px;padding:9px 16px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--gold);cursor:pointer;backdrop-filter:blur(10px);transition:all .18s;display:flex;align-items:center;gap:6px;font-weight:600}
+.restart-btn-fixed:hover{border-color:var(--gold2);color:var(--gold2);background:rgba(201,168,76,.08)}
+
+/* ── KICK BUTTON ─────────────────────────────── */
+.kick-btn{background:none;border:none;padding:4px 8px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--fog);transition:all .15s;flex-shrink:0;line-height:1}
+.kick-btn:hover{color:var(--rose2);background:rgba(232,69,90,.12)}
+
+/* ── COPY CODE CHIP ──────────────────────────── */
+.copy-code-chip{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);letter-spacing:.22em;font-size:clamp(32px,10vw,50px);font-weight:500;color:var(--gold2);line-height:1;cursor:pointer;border-radius:8px;padding:2px 6px;margin:-2px -6px;transition:background .15s;user-select:none}
+.copy-code-chip:hover{background:rgba(201,168,76,.1)}
+.copy-code-chip:active{background:rgba(201,168,76,.2)}
+.copy-icon{font-size:14px;opacity:.6;letter-spacing:0;font-weight:400}
 
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--ink3);border:1px solid var(--line2);padding:11px 22px;border-radius:12px;font-size:13px;font-family:var(--mono);color:var(--rose2);letter-spacing:.05em;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:toastIn .25s ease;z-index:2000;white-space:nowrap;max-width:88vw;overflow:hidden;text-overflow:ellipsis}
 @keyframes toastIn{from{transform:translateX(-50%) translateY(14px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
@@ -307,38 +317,34 @@ function shake(id){
 }
 var root=document.getElementById('app');
 function R(html){
-  // Remove any lingering reset buttons from previous screens
-  document.querySelectorAll('.reset-btn').forEach(function(el){el.remove();});
-  // Inject reset button on all non-home screens
-  var resetHtml='<button class="reset-btn" onclick="resetToHome()" title="Return to main menu">⟳ Reset</button>';
+  // Remove any lingering host-action buttons from previous renders
+  document.querySelectorAll('.restart-btn-fixed').forEach(function(el){el.remove();});
   root.innerHTML=html;
-  if(G.view!=='home'){
-    var btn=document.createElement('div');
-    btn.innerHTML=resetHtml;
-    document.body.appendChild(btn.firstChild);
+  // Inject floating "Restart Game" button for host only, on non-lobby/non-home screens
+  if(G.isHost && G.view!=='home' && G.view!=='lobby'){
+    var btn=document.createElement('button');
+    btn.className='restart-btn-fixed';
+    btn.innerHTML='🔄 Restart Game';
+    btn.onclick=restartGame;
+    document.body.appendChild(btn);
   }
 }
 
-function resetToHome(){
-  // Confirm before leaving an active game
-  if(G.gameCode && G.gameData && G.gameData.status && G.gameData.status!=='lobby'){
-    if(!confirm('Leave this game and return to the main menu?')) return;
-  }
-  stopScanner();
-  if(G.dbOff){G.dbOff();G.dbOff=null;}
-  // Remove player from Firebase if mid-game
-  if(G.gameCode && G.playerId){
-    db.ref('games/'+G.gameCode+'/players/'+G.playerId).remove().catch(function(){});
-  }
-  // Full state reset
-  G.gameCode=null; G.playerId=null; G.playerName=null;
-  G.isHost=false; G.role=null; G.myWord=null;
-  G.players={}; G.gameData=null;
+function restartGame(){
+  if(!G.isHost) return;
+  if(!confirm('Restart the game? All players will return to the lobby.')) return;
+  // Reset game state back to lobby — keep players, keep room
   G.votedAlready=false; G.lastVoteRound=null; G.myVoteTarget=null;
-  G.joinUrl='';
-  // Remove any lingering reset buttons
-  document.querySelectorAll('.reset-btn').forEach(function(el){el.remove();});
-  showHome();
+  G.role=null; G.myWord=null;
+  var rp={};
+  Object.keys(G.players).forEach(function(id){
+    var p=G.players[id];
+    rp[id]={name:p.name,isHost:!!p.isHost,joinedAt:p.joinedAt||0};
+  });
+  db.ref('games/'+G.gameCode).set({
+    host:G.playerId,status:'lobby',createdAt:Date.now(),
+    round:1,failedRounds:[],players:rp
+  });
 }
 
 function stopScanner(){
@@ -663,21 +669,26 @@ function showLobby(){
   var canStart=G.isHost&&count>=3;
   G.joinUrl=location.origin+location.pathname+'?join='+G.gameCode;
 
-  // Vertical player list
+  // Vertical player list — host sees kick buttons on non-self, non-host players
   var rows=pIds.map(function(id){
     var p=players[id],isMe=id===G.playerId;
     var badges='';
     if(p.isHost) badges+='<span class="p-badge badge-host">HOST</span>';
     if(isMe)     badges+='<span class="p-badge badge-you">YOU</span>';
+    var kickBtn=(G.isHost&&!isMe&&!p.isHost)
+      ?'<button class="kick-btn" onclick="kickPlayer(\''+id+'\')" title="Kick '+p.name+'">✕</button>'
+      :'';
     return '<div class="prow'+(p.isHost?' is-host':'')+(isMe?' is-me':'')+'">'+
       '<div class="p-av">'+p.name[0].toUpperCase()+'</div>'+
       '<span class="p-name">'+p.name+'</span>'+
       badges+
+      kickBtn+
     '</div>';
   }).join('');
 
   var footer=G.isHost
     ?'<button class="btn btn-gold"'+(canStart?'':' disabled')+' onclick="startGame()">⚡&nbsp; Start Game</button>'+
+      '<button class="btn btn-ghost" style="margin-top:4px" onclick="restartGame()">🔄&nbsp; Restart Game</button>'+
       '<p class="lobby-hint">No player limit · Min. 3 to start</p>'
     :'<p class="lobby-hint">Waiting for host to start the game…</p>';
 
@@ -686,8 +697,8 @@ function showLobby(){
     '<div class="lobby-top">'+
       '<div class="lobby-code-row">'+
         '<div>'+
-          '<p class="lobby-code-label">Game Code</p>'+
-          '<p class="lobby-code">'+G.gameCode+'</p>'+
+          '<p class="lobby-code-label">Game Code <span style="font-size:9px;letter-spacing:.05em;color:var(--fog);font-family:var(--mono)">(tap to copy)</span></p>'+
+          '<p class="copy-code-chip" onclick="copyGameCode()" id="gameCodeChip">'+G.gameCode+'<span class="copy-icon">⎘</span></p>'+
           '<p class="lobby-count">'+count+' player'+(count!==1?'s':'')+' in lobby</p>'+
         '</div>'+
       '</div>'+
@@ -730,6 +741,35 @@ function startGame(){
     realWord:pair.real,impostorWord:pair.imp,
     votes:null,round:1,failedRounds:[]
   });
+}
+
+function kickPlayer(pid){
+  if(!G.isHost||!pid) return;
+  var name=(G.players[pid]||{}).name||'this player';
+  if(!confirm('Kick '+name+' from the game?')) return;
+  db.ref('games/'+G.gameCode+'/players/'+pid).remove();
+}
+
+function copyGameCode(){
+  var code=G.gameCode;
+  if(!code) return;
+  var shareText=code+' — join at '+G.joinUrl;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(shareText).then(function(){
+      toast('✓ Code copied: '+code);
+      var chip=document.getElementById('gameCodeChip');
+      if(chip){chip.style.background='rgba(46,207,138,.15)';setTimeout(function(){chip.style.background='';},700);}
+    }).catch(function(){fallbackCopy(code);});
+  } else {
+    fallbackCopy(code);
+  }
+}
+function fallbackCopy(code){
+  var ta=document.createElement('textarea');
+  ta.value=code;ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');toast('✓ Code copied: '+code);}catch(e){toast('Code: '+code);}
+  document.body.removeChild(ta);
 }
 
 /* ═══════════════ ROLE REVEAL ════════════════ */
@@ -1007,7 +1047,7 @@ function listenGame(code){
     var gd=snap.val();
     G.gameData=gd;G.players=gd.players||{};
     switch(gd.status){
-      case 'lobby':          G.votedAlready=false; G.lastVoteRound=null; G.myVoteTarget=null; showLobby();        break;
+      case 'lobby':          G.votedAlready=false; G.lastVoteRound=null; G.myVoteTarget=null; G.role=null; G.myWord=null; document.querySelectorAll('.restart-btn-fixed').forEach(function(el){el.remove();}); showLobby(); break;
       case 'role':           if(G.view!=='role')         showRole();         break;
       case 'discuss':        if(G.view!=='discuss')      showDiscuss();      break;
       case 'vote':           showVote(); checkVoteResult();              break;
