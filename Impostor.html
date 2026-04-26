@@ -210,7 +210,21 @@ html,body{min-height:100%;background:var(--ink);color:var(--snow);font-family:va
 .t-track{flex:1;background:var(--ink3);border-radius:4px;overflow:hidden;height:22px}
 .t-fill{height:100%;min-width:22px;background:linear-gradient(90deg,var(--rose),var(--iris));border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:700;font-family:var(--mono);transition:width .7s ease}
 
-/* ── TOAST ──────────────────────────────────── */
+/* ── VOTE CHART ──────────────────────────────── */
+.vchart-card{width:100%;background:var(--ink2);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.vchart-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.2em;color:var(--fog);margin-bottom:4px}
+.vchart-row{display:flex;align-items:center;gap:10px}
+.vchart-name{width:72px;flex-shrink:0;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dust)}
+.vchart-me{color:var(--snow)!important}
+.vchart-track{flex:1;background:var(--ink3);border-radius:6px;overflow:hidden;height:20px}
+.vchart-fill{height:100%;min-width:0;background:linear-gradient(90deg,var(--iris),var(--rose));border-radius:6px}
+.vchart-fill-voted{background:linear-gradient(90deg,var(--rose),var(--gold))!important}
+.vchart-count{width:20px;flex-shrink:0;font-size:12px;font-family:var(--mono);color:var(--fog);text-align:right}
+
+/* ── RESET BUTTON ───────────────────────────── */
+.reset-btn{position:fixed;top:16px;right:16px;z-index:900;background:rgba(13,13,20,.85);border:1px solid var(--line2);border-radius:10px;padding:8px 14px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--fog);cursor:pointer;backdrop-filter:blur(8px);transition:all .18s;display:flex;align-items:center;gap:6px}
+.reset-btn:hover{border-color:var(--rose);color:var(--rose2)}
+
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--ink3);border:1px solid var(--line2);padding:11px 22px;border-radius:12px;font-size:13px;font-family:var(--mono);color:var(--rose2);letter-spacing:.05em;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:toastIn .25s ease;z-index:2000;white-space:nowrap;max-width:88vw;overflow:hidden;text-overflow:ellipsis}
 @keyframes toastIn{from{transform:translateX(-50%) translateY(14px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
@@ -238,24 +252,31 @@ var db = firebase.database();
 
 /* ═══════════════ WORD BANK ════════════════ */
 var WORDS = [
-  {real:"Piano",imp:"Keyboard"},{real:"Shark",imp:"Dolphin"},
-  {real:"Pizza",imp:"Flatbread"},{real:"Astronaut",imp:"Cosmonaut"},
-  {real:"Castle",imp:"Fortress"},{real:"Volcano",imp:"Mountain"},
-  {real:"Submarine",imp:"Boat"},{real:"Diamond",imp:"Crystal"},
-  {real:"Tiger",imp:"Leopard"},{real:"Helicopter",imp:"Drone"},
-  {real:"Chocolate",imp:"Caramel"},{real:"Library",imp:"Bookstore"},
-  {real:"Sword",imp:"Dagger"},{real:"Thunderstorm",imp:"Rain"},
-  {real:"Motorcycle",imp:"Bicycle"},{real:"Vampire",imp:"Zombie"},
-  {real:"Campfire",imp:"Bonfire"},{real:"Prison",imp:"Jail"},
-  {real:"Telescope",imp:"Binoculars"},{real:"Tornado",imp:"Hurricane"},
-  {real:"Guitar",imp:"Ukulele"},{real:"Crown",imp:"Tiara"},
-  {real:"Cannon",imp:"Catapult"},{real:"Igloo",imp:"Tent"},
-  {real:"Compass",imp:"Map"},{real:"Lantern",imp:"Flashlight"},
-  {real:"Jungle",imp:"Forest"},{real:"Pirate",imp:"Viking"},
-  {real:"Rocket",imp:"Missile"},{real:"Mirror",imp:"Window"},
-  {real:"Cactus",imp:"Palm Tree"},{real:"Snowflake",imp:"Raindrop"},
-  {real:"Lighthouse",imp:"Watchtower"},{real:"Wizard",imp:"Witch"},
-  {real:"Trampoline",imp:"Mattress"},{real:"Walrus",imp:"Seal"}
+  {real:"Piano",imp:"Paintbrush"},{real:"Shark",imp:"Cactus"},
+  {real:"Pizza",imp:"Telescope"},{real:"Astronaut",imp:"Chef"},
+  {real:"Castle",imp:"Submarine"},{real:"Volcano",imp:"Library"},
+  {real:"Submarine",imp:"Campfire"},{real:"Diamond",imp:"Tornado"},
+  {real:"Tiger",imp:"Guitar"},{real:"Helicopter",imp:"Crown"},
+  {real:"Chocolate",imp:"Compass"},{real:"Library",imp:"Volcano"},
+  {real:"Sword",imp:"Trampoline"},{real:"Thunderstorm",imp:"Walrus"},
+  {real:"Motorcycle",imp:"Telescope"},{real:"Vampire",imp:"Compass"},
+  {real:"Campfire",imp:"Diamond"},{real:"Prison",imp:"Guitar"},
+  {real:"Telescope",imp:"Prison"},{real:"Tornado",imp:"Chocolate"},
+  {real:"Guitar",imp:"Castle"},{real:"Crown",imp:"Motorcycle"},
+  {real:"Cannon",imp:"Lighthouse"},{real:"Igloo",imp:"Sword"},
+  {real:"Compass",imp:"Helicopter"},{real:"Lantern",imp:"Pirate"},
+  {real:"Jungle",imp:"Diamond"},{real:"Pirate",imp:"Lantern"},
+  {real:"Rocket",imp:"Campfire"},{real:"Mirror",imp:"Cactus"},
+  {real:"Cactus",imp:"Rocket"},{real:"Snowflake",imp:"Crown"},
+  {real:"Lighthouse",imp:"Piano"},{real:"Wizard",imp:"Submarine"},
+  {real:"Trampoline",imp:"Volcano"},{real:"Walrus",imp:"Thunderstorm"},
+  {real:"Chef",imp:"Astronaut"},{real:"Paintbrush",imp:"Shark"},
+  {real:"Firefighter",imp:"Telescope"},{real:"Surgeon",imp:"Igloo"},
+  {real:"Roller Coaster",imp:"Prison"},{real:"Avalanche",imp:"Guitar"},
+  {real:"Submarine",imp:"Wizard"},{real:"Glacier",imp:"Motorcycle"},
+  {real:"Quicksand",imp:"Lantern"},{real:"Tornado",imp:"Pirate"},
+  {real:"Bonfire",imp:"Snowflake"},{real:"Fossil",imp:"Vampire"},
+  {real:"Catapult",imp:"Mirror"},{real:"Tundra",imp:"Rocket"}
 ];
 
 /* ═══════════════ STATE ════════════════════ */
@@ -264,7 +285,7 @@ var G={
   isHost:false,role:null,myWord:null,
   players:{},gameData:null,
   votedAlready:false,dbOff:null,qrScanner:null,
-  joinUrl:'',lastVoteRound:null
+  joinUrl:'',lastVoteRound:null,myVoteTarget:null
 };
 
 /* ═══════════════ UTILS ════════════════════ */
@@ -285,7 +306,40 @@ function shake(id){
   el.classList.add('shake');setTimeout(function(){el.classList.remove('shake');},400);
 }
 var root=document.getElementById('app');
-function R(html){root.innerHTML=html}
+function R(html){
+  // Remove any lingering reset buttons from previous screens
+  document.querySelectorAll('.reset-btn').forEach(function(el){el.remove();});
+  // Inject reset button on all non-home screens
+  var resetHtml='<button class="reset-btn" onclick="resetToHome()" title="Return to main menu">⟳ Reset</button>';
+  root.innerHTML=html;
+  if(G.view!=='home'){
+    var btn=document.createElement('div');
+    btn.innerHTML=resetHtml;
+    document.body.appendChild(btn.firstChild);
+  }
+}
+
+function resetToHome(){
+  // Confirm before leaving an active game
+  if(G.gameCode && G.gameData && G.gameData.status && G.gameData.status!=='lobby'){
+    if(!confirm('Leave this game and return to the main menu?')) return;
+  }
+  stopScanner();
+  if(G.dbOff){G.dbOff();G.dbOff=null;}
+  // Remove player from Firebase if mid-game
+  if(G.gameCode && G.playerId){
+    db.ref('games/'+G.gameCode+'/players/'+G.playerId).remove().catch(function(){});
+  }
+  // Full state reset
+  G.gameCode=null; G.playerId=null; G.playerName=null;
+  G.isHost=false; G.role=null; G.myWord=null;
+  G.players={}; G.gameData=null;
+  G.votedAlready=false; G.lastVoteRound=null; G.myVoteTarget=null;
+  G.joinUrl='';
+  // Remove any lingering reset buttons
+  document.querySelectorAll('.reset-btn').forEach(function(el){el.remove();});
+  showHome();
+}
 
 function stopScanner(){
   if(G.qrScanner){
@@ -758,28 +812,52 @@ function showVote(){
   var players=G.players;
   var votes=(G.gameData&&G.gameData.votes)||{};
   var round=G.gameData&&G.gameData.round||1;
-  // Reset votedAlready if this is a fresh vote for the current round
-  // (handles the case where status transitions to 'vote' on a new round)
   var voteRoundKey='voteRound_'+round;
   if(G.lastVoteRound!==voteRoundKey){
     G.lastVoteRound=voteRoundKey;
-    G.votedAlready=!!votes[G.playerId]; // restore from DB in case of reconnect
+    G.myVoteTarget=votes[G.playerId]||null;
+  } else {
+    G.myVoteTarget=votes[G.playerId]||G.myVoteTarget;
   }
-  var myVote=votes[G.playerId];
+  var myVote=G.myVoteTarget;
   var vc=Object.keys(votes).length,tot=Object.keys(players).length;
   var failed=G.gameData&&G.gameData.failedRounds||[];
-  // Exclude self from voting cards
+
+  // Build tally for chart
+  var tally={};
+  Object.keys(players).forEach(function(id){tally[id]=0;});
+  Object.values(votes).forEach(function(v){tally[v]=(tally[v]||0)+1;});
+  var maxVotes=Math.max.apply(null,Object.values(tally).concat([1]));
+
+  // Player vote cards (excluding self)
   var cards=Object.keys(players).filter(function(id){return id!==G.playerId;}).map(function(id){
     var p=players[id],voted=myVote===id;
-    var cnt=Object.values(votes).filter(function(v){return v===id;}).length;
-    return '<div class="vc'+(voted?' vc-voted':'')+'"'+
-      (!myVote?' onclick="castVote(\''+id+'\')"':'')+'>'+
+    var cnt=tally[id]||0;
+    return '<div class="vc'+(voted?' vc-voted':'')+'" onclick="castVote(\''+id+'\')">'+
       '<div class="vc-av">'+p.name[0].toUpperCase()+'</div>'+
       '<div class="vc-name">'+p.name+'</div>'+
       '<div class="vc-cnt">'+(cnt>0?cnt+' vote'+(cnt>1?'s':''):'')+'</div>'+
       (voted?'<div class="vc-check">✓</div>':'')+
     '</div>';
   }).join('');
+
+  // Live vote bar chart (all players)
+  var sortedPlayers=Object.keys(players).sort(function(a,b){return (tally[b]||0)-(tally[a]||0);});
+  var chartRows=sortedPlayers.map(function(id){
+    var p=players[id];
+    var cnt=tally[id]||0;
+    var pct=Math.round((cnt/maxVotes)*100);
+    var isMe=id===G.playerId;
+    var isMyVote=myVote===id;
+    return '<div class="vchart-row">'+
+      '<div class="vchart-name'+(isMe?' vchart-me':'')+'">'+p.name+(isMe?' (you)':'')+'</div>'+
+      '<div class="vchart-track">'+
+        '<div class="vchart-fill'+(isMyVote?' vchart-fill-voted':'')+'" style="width:'+pct+'%;transition:width .5s ease"></div>'+
+      '</div>'+
+      '<div class="vchart-count">'+cnt+'</div>'+
+    '</div>';
+  }).join('');
+
   R(
     '<div class="screen">'+
     '<div class="phase-row">'+
@@ -788,17 +866,21 @@ function showVote(){
     '</div>'+
     '<div style="text-align:center;width:100%">'+
       '<p style="font-family:var(--serif);font-size:28px;font-weight:700;color:var(--snow)">Who\'s the Impostor?</p>'+
-      '<p style="font-size:12px;color:var(--fog);font-family:var(--mono);margin-top:4px;letter-spacing:.06em">'+vc+' / '+tot+' voted</p>'+
+      '<p style="font-size:12px;color:var(--fog);font-family:var(--mono);margin-top:4px;letter-spacing:.06em">'+vc+' / '+tot+' voted · tap any player to vote or change vote</p>'+
     '</div>'+
     '<div class="vote-grid">'+cards+'</div>'+
-    (myVote?'<p class="vote-msg">✓ Vote cast — waiting for others…</p>':'<p style="font-size:13px;color:var(--fog);text-align:center;font-family:var(--mono);letter-spacing:.04em">Tap a player to vote them out</p>')+
+    (myVote?'<p class="vote-msg">✓ Voted — tap another player to change your vote</p>':'<p style="font-size:13px;color:var(--fog);text-align:center;font-family:var(--mono);letter-spacing:.04em">Tap a player to vote them out</p>')+
+    '<div class="vchart-card">'+
+      '<p class="vchart-title">📊 Live Vote Tally</p>'+
+      chartRows+
+    '</div>'+
     '</div>'
   );
 }
 
 function castVote(tid){
-  if(G.votedAlready) return;
-  G.votedAlready=true;
+  // Allow changing vote — remove lock
+  G.myVoteTarget=tid;
   db.ref('games/'+G.gameCode+'/votes/'+G.playerId).set(tid);
 }
 
@@ -857,6 +939,7 @@ function nextRound(){
   if(!G.isHost) return;
   G.votedAlready=false;
   G.lastVoteRound=null;
+  G.myVoteTarget=null;
   db.ref('games/'+G.gameCode+'/votedAlready').remove();
   db.ref('games/'+G.gameCode).update({status:'discuss'});
 }
@@ -904,6 +987,7 @@ function playAgain(){
   if(!G.isHost) return;
   G.votedAlready=false;
   G.lastVoteRound=null;
+  G.myVoteTarget=null;
   var rp={};
   Object.keys(G.players).forEach(function(id){
     var p=G.players[id];rp[id]={name:p.name,isHost:!!p.isHost,joinedAt:p.joinedAt||0};
@@ -923,7 +1007,7 @@ function listenGame(code){
     var gd=snap.val();
     G.gameData=gd;G.players=gd.players||{};
     switch(gd.status){
-      case 'lobby':          G.votedAlready=false; G.lastVoteRound=null; showLobby();        break;
+      case 'lobby':          G.votedAlready=false; G.lastVoteRound=null; G.myVoteTarget=null; showLobby();        break;
       case 'role':           if(G.view!=='role')         showRole();         break;
       case 'discuss':        if(G.view!=='discuss')      showDiscuss();      break;
       case 'vote':           showVote(); checkVoteResult();              break;
